@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package org.jpasecurity.jpql.parser;
+package org.jpasecurity.jpql2.parser;
 
 /**
  * This visitor creates a jpql-string of a query tree.
@@ -113,21 +113,6 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      * {@inheritDoc}
      */
     @Override
-    public boolean visit(JpqlInCollection node, StringBuilder query) {
-        query.append(" IN (");
-        node.jjtGetChild(0).visit(this, query);
-        query.append(')');
-        for (int i = 1; i < node.jjtGetNumChildren(); i++) {
-            query.append(' ');
-            node.jjtGetChild(i).visit(this, query);
-        }
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public boolean visit(JpqlFetchJoin node, StringBuilder query) {
         for (int i = 0; i < node.jjtGetNumChildren(); i++) {
             node.jjtGetChild(i).visit(this, query);
@@ -164,7 +149,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      */
     @Override
     public boolean visit(JpqlJoinCondition node, StringBuilder query) {
-        query.append(" WITH ");
+        query.append(" ON ");
         node.jjtGetChild(0).visit(this, query);
         return false;
     }
@@ -190,33 +175,6 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         node.jjtGetChild(0).visit(this, query);
         for (int i = 1; i < node.jjtGetNumChildren(); i++) {
             query.append('.');
-            node.jjtGetChild(i).visit(this, query);
-        }
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean visit(JpqlSetClause node, StringBuilder query) {
-        query.append(" SET ");
-        node.jjtGetChild(0).visit(this, query);
-        for (int i = 1; i < node.jjtGetNumChildren(); i++) {
-            query.append(", ");
-            node.jjtGetChild(i).visit(this, query);
-        }
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean visit(JpqlSelectExpressions node, StringBuilder query) {
-        node.jjtGetChild(0).visit(this, query);
-        for (int i = 1; i < node.jjtGetNumChildren(); i++) {
-            query.append(", ");
             node.jjtGetChild(i).visit(this, query);
         }
         return false;
@@ -286,15 +244,6 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      */
     @Override
     public boolean visit(JpqlDistinct node, StringBuilder query) {
-        query.append(" DISTINCT ");
-        return true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean visit(JpqlDistinctPath node, StringBuilder query) {
         query.append(" DISTINCT ");
         return true;
     }

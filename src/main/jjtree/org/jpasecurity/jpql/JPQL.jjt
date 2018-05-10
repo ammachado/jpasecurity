@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.   
  */
+
 /**
  *  An JP QL grammar parser.
  *  It is based on the parser of OpenJPA by Patrick Linskey and Marc Prud"hommeaux
@@ -46,8 +47,6 @@ options {
 
 PARSER_BEGIN(JpqlParser)
 package org.jpasecurity.jpql.parser;
-
-import java.io.*;
 
 public class JpqlParser {
 
@@ -406,14 +405,6 @@ void fromItem(): {} {
     identificationVariableDeclaration() | collectionMemberDeclaration()
 }
 
-void identificationVariableDeclaration() #IdentificationVariableDeclaration: {} {
-    rangeVariableDeclaration() ( LOOKAHEAD(fetchJoin()) fetchJoin() | LOOKAHEAD(join()) join() )*
-}
-
-void rangeVariableDeclaration() #FromItem: {} {
-    entityName() optionalPathQualifier()
-}
-
 void optionalPathQualifier() #OptionalPathQualifier: {} {
     [<AS>] identificationVariable()
 }
@@ -430,10 +421,14 @@ void fetchJoin() #FetchJoin: {} {
 }
 
 void joinAssociationPathExpression() #CollectionValuedPath: {} {
-    LOOKAHEAD(joinCollectionValuedPathExpression()) joinCollectionValuedPathExpression()
-    | LOOKAHEAD(joinSingleValuedPathExpression()) joinSingleValuedPathExpression()
-    | LOOKAHEAD(treatedCollectionValuedPathExpression()) treatedCollectionValuedPathExpression()
-    | LOOKAHEAD(treatedSingleValuedPathExpression()) treatedSingleValuedPathExpression()
+    // a join path is any dot-separated path expression starting with a
+    // non-reserved word containing at minimum two path components
+    identificationVariable() (<DOT> objectField())+
+    | LOOKAHEAD(treatJoin()) treatJoin() [LOOKAHEAD(1) <AS>] identificationVariable() #TreatJoin
+}
+
+void treatJoin() #TreatJoin: {} {
+    <TREAT> <LEFT_PAREN> joinAssociationPathExpression() [<AS>] identificationVariable() <RIGHT_PAREN>
 }
 
 void joinCollectionValuedPathExpression(): {} {
@@ -463,6 +458,22 @@ void joinCondition() #JoinCondition: {} {
 
 void collectionMemberDeclaration() #InCollection: {} {
     <IN> <LEFT_PAREN> collectionValuedPathExpression() <RIGHT_PAREN> optionalPathQualifier()
+}
+
+
+
+
+
+void identificationVariableDeclaration() #IdentificationVariableDeclaration: {} {
+    rangeVariableDeclaration() (LOOKAHEAD(fetchJoin()) fetchJoin() | LOOKAHEAD(join()) join())*
+}
+
+void rangeVariableDeclaration() #FromItem: {} {
+    entityName() [LOOKAHEAD(1) <AS>] [LOOKAHEAD(identificationVariable()) identificationVariable()]
+}
+
+void qualifiedPathExpression() #Path: {} {
+    generalIdentificationVariable() (LOOKAHEAD(2) <DOT> objectField())+
 }
 
 void subType(): {} {
@@ -923,7 +934,7 @@ void substring() #Substring: {} {
 }
 
 void trim() #Trim: {} {
-    <TRIM> <LEFT_PAREN> [LOOKAHEAD(2)[trimSpecification()] [trimCharacter()] <FROM>] stringExpression() <RIGHT_PAREN>
+    <TRIM> <LEFT_PAREN> [[trimSpecification()] [trimCharacter()] <FROM>] stringExpression() <RIGHT_PAREN>
 }
 
 void trimSpecification(): {} {
@@ -1175,7 +1186,7 @@ void singleValuedPathExpression() #Path: {} {
     LOOKAHEAD(qualifiedIdentificationVariable()) qualifiedIdentificationVariable()
     | LOOKAHEAD(6) <TREAT> <LEFT_PAREN> qualifiedIdentificationVariable() <AS> subType() <RIGHT_PAREN>
     | LOOKAHEAD(stateFieldPathExpression()) stateFieldPathExpression()
-    | LOOKAHEAD(singleValuedObjectPathExpression()) singleValuedObjectPathExpression()
+    | singleValuedObjectPathExpression()
 }
 
 void stateFieldPathExpression(): {} {

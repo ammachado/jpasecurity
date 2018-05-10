@@ -40,8 +40,7 @@ public class EnumTest {
 
     @Before
     public void createTestData() {
-        EntityManagerFactory entityManagerFactory
-            = Persistence.createEntityManagerFactory("task");
+        EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("task");
         entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
         Task closedTask = new Task("Closed Task");

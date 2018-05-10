@@ -71,7 +71,7 @@ public class MappedPathEvaluator implements PathEvaluator {
                     continue;
                 }
                 ManagedType<?> managedType = forModel(metamodel).filter(rootObject.getClass());
-                if (containsAttribute(managedType, property)) {
+                if (managedType != null && containsAttribute(managedType, property)) {
                     Attribute<?, ?> propertyMapping = managedType.getAttribute(property);
                     Object result = getValue(rootObject, propertyMapping);
                     if (result instanceof Collection) {

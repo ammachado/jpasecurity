@@ -42,6 +42,7 @@ import javax.persistence.spi.ProviderUtil;
  */
 public class MockitoPersistenceProvider implements PersistenceProvider {
 
+    @Override
     public EntityManagerFactory createEntityManagerFactory(String emName, @SuppressWarnings("rawtypes") Map map) {
         if (map != null
             && map.containsKey(SecurePersistenceProvider.PERSISTENCE_PROVIDER_PROPERTY)
@@ -62,6 +63,7 @@ public class MockitoPersistenceProvider implements PersistenceProvider {
         }
     }
 
+    @Override
     public EntityManagerFactory createContainerEntityManagerFactory(PersistenceUnitInfo info,
                                                                     @SuppressWarnings("rawtypes") Map map) {
         return createEntityManagerFactory(info.getPersistenceUnitName(), map);
@@ -69,15 +71,16 @@ public class MockitoPersistenceProvider implements PersistenceProvider {
 
     private class MockitoEntityManagerFactory implements EntityManagerFactory {
 
+        private final Metamodel metamodel;
+        private final CriteriaBuilder criteriaBuilder;
         private boolean open = true;
-        private Metamodel metamodel;
-        private CriteriaBuilder criteriaBuilder;
 
         MockitoEntityManagerFactory() {
             metamodel = mock(Metamodel.class);
             criteriaBuilder = mock(CriteriaBuilder.class);
         }
 
+        @Override
         public EntityManager createEntityManager() {
             if (!open) {
                 throw new IllegalStateException("already closed");
@@ -88,34 +91,42 @@ public class MockitoPersistenceProvider implements PersistenceProvider {
             return entityManager;
         }
 
+        @Override
         public EntityManager createEntityManager(@SuppressWarnings("rawtypes") Map map) {
             return createEntityManager();
         }
 
+        @Override
         public boolean isOpen() {
             return open;
         }
 
+        @Override
         public void close() {
             open = false;
         }
 
+        @Override
         public CriteriaBuilder getCriteriaBuilder() {
             return criteriaBuilder;
         }
 
+        @Override
         public Metamodel getMetamodel() {
             return metamodel;
         }
 
+        @Override
         public Map<String, Object> getProperties() {
             return null;
         }
 
+        @Override
         public Cache getCache() {
             return null;
         }
 
+        @Override
         public PersistenceUnitUtil getPersistenceUnitUtil() {
             return null;
         }
@@ -144,6 +155,7 @@ public class MockitoPersistenceProvider implements PersistenceProvider {
         }
     }
 
+    @Override
     public ProviderUtil getProviderUtil() {
         return null;
     }

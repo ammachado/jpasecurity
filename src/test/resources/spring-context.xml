@@ -5,10 +5,12 @@
        xmlns:aop="http://www.springframework.org/schema/aop"
        xmlns:tx="http://www.springframework.org/schema/tx"
        xmlns:sec="http://www.springframework.org/schema/security"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
                            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
                            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
-                           http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd">
+                           http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd
+                           http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 
     <bean id="contactsDao" class="org.jpasecurity.spring.contacts.DefaultContactsDao"/>
 
@@ -85,13 +87,9 @@
         </constructor-arg>
     </bean>
 
-    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"
-          p:driverClassName="org.hsqldb.jdbcDriver"
-          p:url="jdbc:hsqldb:mem:contacts"
-          p:username="sa"
-          p:password=""/>
+    <jdbc:embedded-database id="dataSource" type="H2" database-name="contacts"/>
 
-    <!-- Declare an acl cache-->
+    <!-- Declare an ACL cache-->
     <bean id="permissionGrantingStrategy" class="org.springframework.security.acls.domain.DefaultPermissionGrantingStrategy">
         <constructor-arg name="auditLogger">
             <bean class="org.springframework.security.acls.domain.ConsoleAuditLogger"/>

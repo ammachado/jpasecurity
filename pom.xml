@@ -251,6 +251,16 @@
                                          token="public Object jjtAccept(JpqlParserVisitor visitor, Object data)"
                                          value="@Override public &lt;T&gt; boolean jjtAccept(JpqlParserVisitor&lt;T&gt; visitor, T data)"/>
                                 <delete file="target/generated-sources/jjtree/org/jpasecurity/jpql/parser/JpqlParserDefaultVisitor.java"/>
+
+                                <delete>
+                                    <fileset dir="target/generated-sources/javacc/org/jpasecurity/jpql2/parser/">
+                                        <present targetdir="src/main/java/org/jpasecurity/jpql2/parser"/>
+                                    </fileset>
+                                </delete>
+                                <replace dir="target/generated-sources/jjtree/org/jpasecurity/jpql2/parser/"
+                                         token="public Object jjtAccept(JpqlParserVisitor visitor, Object data)"
+                                         value="@Override public &lt;T&gt; boolean jjtAccept(JpqlParserVisitor&lt;T&gt; visitor, T data)"/>
+                                <delete file="target/generated-sources/jjtree/org/jpasecurity/jpql2/parser/JpqlParserDefaultVisitor.java"/>
                             </target>
                         </configuration>
                         <goals>
@@ -534,12 +544,6 @@
             <artifactId>hibernate-jpamodelgen</artifactId>
             <version>5.1.14.Final</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hsqldb</groupId>
-            <artifactId>hsqldb</artifactId>
-            <version>2.3.5</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>

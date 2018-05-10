@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
@@ -479,7 +480,7 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
             } else {
                 node.jjtGetChild(1).visit(this, data);
                 Object value2 = data.getResult();
-                data.setResult(!value1.equals(value2));
+                data.setResult(!Objects.equals(value1, value2));
             }
         } catch (NotEvaluatableException e) {
             //result is undefined, which is ok here
