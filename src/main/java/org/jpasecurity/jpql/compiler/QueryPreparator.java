@@ -38,6 +38,7 @@ import org.jpasecurity.jpql.parser.JpqlIdentificationVariableDeclaration;
 import org.jpasecurity.jpql.parser.JpqlIn;
 import org.jpasecurity.jpql.parser.JpqlIntegerLiteral;
 import org.jpasecurity.jpql.parser.JpqlIsNull;
+import org.jpasecurity.jpql.parser.JpqlJoinCondition;
 import org.jpasecurity.jpql.parser.JpqlKey;
 import org.jpasecurity.jpql.parser.JpqlNamedInputParameter;
 import org.jpasecurity.jpql.parser.JpqlNot;
@@ -54,7 +55,6 @@ import org.jpasecurity.jpql.parser.JpqlType;
 import org.jpasecurity.jpql.parser.JpqlValue;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
 import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.JpqlWith;
 import org.jpasecurity.jpql.parser.Node;
 import org.jpasecurity.jpql.parser.SimpleNode;
 
@@ -72,7 +72,7 @@ public class QueryPreparator {
      * @param subselect the where-node
      * @param with the with-node
      */
-    public void appendToWhereClause(JpqlSubselect subselect, JpqlWith with) {
+    public void appendToWhereClause(JpqlSubselect subselect, JpqlJoinCondition with) {
         JpqlWhere where = new JpqlCompiledStatement(subselect).getWhereClause();
         with.jjtGetParent().jjtRemoveChild(2);
         Node condition = with.jjtGetChild(0);
@@ -109,8 +109,7 @@ public class QueryPreparator {
      */
     public Node append(Node node, Path alias, JpqlCompiledStatement statement) {
         Node in = createBrackets(createIn(alias, statement));
-        Node or = createOr(node, in);
-        return or;
+        return createOr(node, in);
     }
 
     /**

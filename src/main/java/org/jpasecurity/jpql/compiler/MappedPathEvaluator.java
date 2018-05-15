@@ -38,20 +38,20 @@ import org.jpasecurity.access.SecurePersistenceUnitUtil;
  */
 public class MappedPathEvaluator implements PathEvaluator {
 
-    private Metamodel metamodel;
-    private SecurePersistenceUnitUtil persistenceUnitUtil;
+    private final Metamodel metamodel;
+    private final SecurePersistenceUnitUtil persistenceUnitUtil;
 
     public MappedPathEvaluator(Metamodel metamodel, SecurePersistenceUnitUtil unitUtil) {
         this.metamodel = metamodel;
         this.persistenceUnitUtil = unitUtil;
     }
 
+    @Override
     public Object evaluate(Object root, String path) {
         if (root == null) {
             return null;
         }
-        Collection<?> rootCollection =
-            root instanceof Collection ? (Collection<?>)root : Collections.singleton(root);
+        Collection<?> rootCollection = root instanceof Collection ? (Collection<?>)root : Collections.singleton(root);
         Collection<?> result = evaluateAll(rootCollection, path);
         if (result.size() > 1) {
             throw new PersistenceException(path + " is not single-valued");
@@ -59,10 +59,11 @@ public class MappedPathEvaluator implements PathEvaluator {
         return result.isEmpty()? null: result.iterator().next();
     }
 
+    @Override
     public <R> List<R> evaluateAll(final Collection<?> root, String path) {
         String[] pathElements = path.split("\\.");
-        List<Object> rootCollection = new ArrayList<Object>(root);
-        List<R> resultCollection = new ArrayList<R>();
+        List<Object> rootCollection = new ArrayList<>(root);
+        List<R> resultCollection = new ArrayList<>();
         for (String property: pathElements) {
             resultCollection.clear();
             for (Object rootObject: rootCollection) {
@@ -93,8 +94,8 @@ public class MappedPathEvaluator implements PathEvaluator {
     }
 
     private boolean containsAttribute(ManagedType<?> managedType, String name) {
-        for (Attribute<?, ?> attributes : managedType.getAttributes()) {
-            if (attributes.getName().equals(name)) {
+        for (Attribute<?, ?> attribute : managedType.getAttributes()) {
+            if (attribute.getName().equals(name)) {
                 return true;
             }
         }
@@ -120,9 +121,7 @@ public class MappedPathEvaluator implements PathEvaluator {
             } else {
                 throw new UnsupportedOperationException("Unsupported member type " + member.getClass().getName());
             }
-        } catch (InvocationTargetException e) {
-            throw new PersistenceException(e);
-        } catch (IllegalAccessException e) {
+        } catch (InvocationTargetException | IllegalAccessException e) {
             throw new PersistenceException(e);
         }
     }

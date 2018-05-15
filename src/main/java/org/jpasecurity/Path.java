@@ -28,10 +28,10 @@ public class Path {
     private static final String VALUE_FUNCTION = "VALUE(";
     private static final String ENTRY_FUNCTION = "ENTRY(";
 
-    private Alias rootAlias;
+    private final Alias rootAlias;
+    private final String subpath;
     private boolean isKeyPath;
     private boolean isValuePath;
-    private String subpath;
     private String[] subpathComponents;
 
     public Path(String path) {

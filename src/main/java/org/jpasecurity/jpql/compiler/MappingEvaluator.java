@@ -135,7 +135,7 @@ public class MappingEvaluator extends JpqlVisitorAdapter<Set<TypeDefinition>> {
                 PluralAttribute<?, ?, ?> pluralAttribute = (PluralAttribute<?, ?, ?>)attribute;
                 managedType = (ManagedType<?>)pluralAttribute.getElementType();
             } else {
-                managedType = (ManagedType<?>)((SingularAttribute)attribute).getType();
+                managedType = (ManagedType<?>)((SingularAttribute<?, ?>)attribute).getType();
             }
         }
         typeDefinitions.add(new TypeDefinition(new Alias(aliasNode.toString()), managedType.getJavaType()));

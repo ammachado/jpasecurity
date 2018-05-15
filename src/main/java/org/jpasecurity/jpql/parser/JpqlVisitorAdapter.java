@@ -136,7 +136,7 @@ public class JpqlVisitorAdapter<T> implements JpqlParserVisitor<T> {
      * {@inheritDoc}
      */
     @Override
-    public boolean visit(JpqlWith node, T data) {
+    public boolean visit(JpqlJoinCondition node, T data) {
         return visit(node);
     }
 
@@ -153,14 +153,6 @@ public class JpqlVisitorAdapter<T> implements JpqlParserVisitor<T> {
      */
     @Override
     public boolean visit(JpqlCollectionValuedPath node, T data) {
-        return visit(node);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean visit(JpqlTreatJoin node, T data) {
         return visit(node);
     }
 
@@ -584,14 +576,6 @@ public class JpqlVisitorAdapter<T> implements JpqlParserVisitor<T> {
      * {@inheritDoc}
      */
     @Override
-    public boolean visit(JpqlNegative node, T data) {
-        return visit(node);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public boolean visit(JpqlConcat node, T data) {
         return visit(node);
     }
@@ -896,14 +880,6 @@ public class JpqlVisitorAdapter<T> implements JpqlParserVisitor<T> {
      * {@inheritDoc}
      */
     @Override
-    public boolean visit(JpqlTreat node, T data) {
-        return visit(node);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public boolean visit(JpqlLiteral node, T data) {
         return visit(node);
     }
@@ -1076,16 +1052,9 @@ public class JpqlVisitorAdapter<T> implements JpqlParserVisitor<T> {
     }
 
     /**
-     * @see #visit(JpqlTreatJoin, Object)
+     * @see #visit(JpqlJoinCondition, Object)
      */
-    public boolean visit(JpqlTreatJoin node) {
-        return true;
-    }
-
-    /**
-     * @see #visit(JpqlWith, Object)
-     */
-    public boolean visit(JpqlWith node) {
+    public boolean visit(JpqlJoinCondition node) {
         return true;
     }
 
@@ -1398,13 +1367,6 @@ public class JpqlVisitorAdapter<T> implements JpqlParserVisitor<T> {
     }
 
     /**
-     * @see #visit(JpqlNegative, Object)
-     */
-    public boolean visit(JpqlNegative node) {
-        return true;
-    }
-
-    /**
      * @see #visit(JpqlConcat, Object)
      */
     public boolean visit(JpqlConcat node) {
@@ -1667,13 +1629,6 @@ public class JpqlVisitorAdapter<T> implements JpqlParserVisitor<T> {
      * @see #visit(JpqlTrimCharacter, Object)
      */
     public boolean visit(JpqlTrimCharacter node) {
-        return true;
-    }
-
-    /**
-     * @see #visit(JpqlTreat, Object)
-     */
-    public boolean visit(JpqlTreat node) {
         return true;
     }
 

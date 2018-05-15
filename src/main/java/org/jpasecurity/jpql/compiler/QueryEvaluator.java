@@ -78,7 +78,6 @@ import org.jpasecurity.jpql.parser.JpqlMemberOf;
 import org.jpasecurity.jpql.parser.JpqlMod;
 import org.jpasecurity.jpql.parser.JpqlMultiply;
 import org.jpasecurity.jpql.parser.JpqlNamedInputParameter;
-import org.jpasecurity.jpql.parser.JpqlNegative;
 import org.jpasecurity.jpql.parser.JpqlNot;
 import org.jpasecurity.jpql.parser.JpqlNotEquals;
 import org.jpasecurity.jpql.parser.JpqlNullif;
@@ -604,19 +603,6 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
             data.setResult(value1.divide(value2, DECIMAL_PRECISION, ROUNDING_MODE));
         } catch (ArithmeticException e) {
             data.setResultUndefined();
-        } catch (NotEvaluatableException e) {
-            //result is undefined, which is ok here
-        }
-        return false;
-    }
-
-    @Override
-    public boolean visit(JpqlNegative node, QueryEvaluationParameters data) {
-        validateChildCount(node, 1);
-        try {
-            node.jjtGetChild(0).visit(this, data);
-            BigDecimal value = new BigDecimal(data.getResult().toString());
-            data.setResult(value.negate());
         } catch (NotEvaluatableException e) {
             //result is undefined, which is ok here
         }

@@ -51,6 +51,7 @@ import org.jpasecurity.jpql.parser.JpqlBigDecimalLiteral;
 import org.jpasecurity.jpql.parser.JpqlBigIntegerLiteral;
 import org.jpasecurity.jpql.parser.JpqlBooleanLiteral;
 import org.jpasecurity.jpql.parser.JpqlCollectionValuedPath;
+import org.jpasecurity.jpql.parser.JpqlComparisonOperator;
 import org.jpasecurity.jpql.parser.JpqlConcat;
 import org.jpasecurity.jpql.parser.JpqlConstructor;
 import org.jpasecurity.jpql.parser.JpqlConstructorParameter;
@@ -79,6 +80,7 @@ import org.jpasecurity.jpql.parser.JpqlIntegerLiteral;
 import org.jpasecurity.jpql.parser.JpqlIsEmpty;
 import org.jpasecurity.jpql.parser.JpqlIsNull;
 import org.jpasecurity.jpql.parser.JpqlJoin;
+import org.jpasecurity.jpql.parser.JpqlJoinCondition;
 import org.jpasecurity.jpql.parser.JpqlLength;
 import org.jpasecurity.jpql.parser.JpqlLessOrEquals;
 import org.jpasecurity.jpql.parser.JpqlLessThan;
@@ -92,7 +94,6 @@ import org.jpasecurity.jpql.parser.JpqlMinimum;
 import org.jpasecurity.jpql.parser.JpqlMod;
 import org.jpasecurity.jpql.parser.JpqlMultiply;
 import org.jpasecurity.jpql.parser.JpqlNamedInputParameter;
-import org.jpasecurity.jpql.parser.JpqlNegative;
 import org.jpasecurity.jpql.parser.JpqlNot;
 import org.jpasecurity.jpql.parser.JpqlNotEquals;
 import org.jpasecurity.jpql.parser.JpqlOr;
@@ -119,7 +120,6 @@ import org.jpasecurity.jpql.parser.JpqlTrimTrailing;
 import org.jpasecurity.jpql.parser.JpqlUpper;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
 import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.JpqlWith;
 import org.jpasecurity.jpql.parser.Node;
 import org.jpasecurity.persistence.mapping.ManagedTypeFilter;
 
@@ -236,7 +236,7 @@ public class CriteriaVisitor extends JpqlVisitorAdapter<CriteriaHolder> {
      * {@inheritDoc}
      */
     @Override
-    public boolean visit(JpqlWith node, CriteriaHolder query) {
+    public boolean visit(JpqlJoinCondition node, CriteriaHolder query) {
         throw new UnsupportedOperationException("WITH is not supported for criterias");
     }
 
@@ -767,15 +767,6 @@ public class CriteriaVisitor extends JpqlVisitorAdapter<CriteriaHolder> {
         Expression<Number> e2 = getNumberExpression(node.jjtGetChild(1), query);
         query.setValue(builder.quot(e1, e2));
         return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean visit(JpqlNegative node, CriteriaHolder query) {
-        query.setValue(builder.neg(getNumberExpression(node.jjtGetChild(0), query)));
-        return true;
     }
 
     /**

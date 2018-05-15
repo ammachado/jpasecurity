@@ -27,7 +27,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      */
     @Override
     public boolean visit(JpqlAccessRule node, StringBuilder query) {
-        query.append(" GRANT ");
+        query.append("GRANT ");
         int index = node.jjtGetNumChildren() - 1;
         if (!(node.jjtGetChild(index) instanceof JpqlFrom)) {
             index--;
@@ -163,7 +163,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      * {@inheritDoc}
      */
     @Override
-    public boolean visit(JpqlWith node, StringBuilder query) {
+    public boolean visit(JpqlJoinCondition node, StringBuilder query) {
         query.append(" WITH ");
         node.jjtGetChild(0).visit(this, query);
         return false;
@@ -447,15 +447,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      */
     @Override
     public boolean visit(JpqlNot node, StringBuilder query) {
-        assert node.jjtGetNumChildren() == 1;
-        if (!(node.jjtGetChild(0) instanceof JpqlBetween
-              || node.jjtGetChild(0) instanceof JpqlLike
-              || node.jjtGetChild(0) instanceof JpqlIsNull
-              || node.jjtGetChild(0) instanceof JpqlIsEmpty
-              || node.jjtGetChild(0) instanceof JpqlIn
-              || node.jjtGetChild(0) instanceof JpqlMemberOf)) {
-            query.append(" NOT ");
-        }
+        assert node.jjtGetNumChildren() == 0;
+        query.append(" NOT ");
         return true;
     }
 
@@ -464,15 +457,17 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      */
     @Override
     public boolean visit(JpqlBetween node, StringBuilder query) {
-        assert node.jjtGetNumChildren() == 3;
-        node.jjtGetChild(0).visit(this, query);
-        if (node.jjtGetParent() instanceof JpqlNot) {
-            query.append(" NOT ");
+        super.validateChildCount(node, 3, 4);
+
+        int i = 0;
+        node.jjtGetChild(i++).visit(this, query);
+        if (node.jjtGetChild(i) instanceof JpqlNot) {
+            node.jjtGetChild(i++).visit(this, query);
         }
         query.append(" BETWEEN ");
-        node.jjtGetChild(1).visit(this, query);
+        node.jjtGetChild(i++).visit(this, query);
         query.append(" AND ");
-        node.jjtGetChild(2).visit(this, query);
+        node.jjtGetChild(i).visit(this, query);
         return false;
     }
 
@@ -816,15 +811,6 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
             node.jjtGetChild(i).visit(this, query);
         }
         return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean visit(JpqlNegative node, StringBuilder query) {
-        query.append('-');
-        return true;
     }
 
     /**

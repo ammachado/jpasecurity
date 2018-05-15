@@ -33,7 +33,7 @@ import javax.persistence.TypedQuery;
  */
 public class DelegatingQuery<T> implements TypedQuery<T> {
 
-    private Query delegate;
+    private final Query delegate;
 
     DelegatingQuery(Query query) {
         if (query == null) {

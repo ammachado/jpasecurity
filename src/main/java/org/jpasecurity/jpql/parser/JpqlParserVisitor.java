@@ -136,12 +136,12 @@ public interface JpqlParserVisitor<T> {
     boolean visit(JpqlJoinSpec node, T data);
 
     /**
-     * Called when visiting a <tt>JpqlWith</tt> node.
+     * Called when visiting a <tt>JpqlJoinCondition</tt> node.
      * @param node the current node
      * @param data that may be needed by the visitor
      * @return <tt>true</tt>, if the node should go on processing the children
      */
-    boolean visit(JpqlWith node, T data);
+    boolean visit(JpqlJoinCondition node, T data);
 
     /**
      * Called when visiting a <tt>JpqlPath</tt> node.
@@ -158,14 +158,6 @@ public interface JpqlParserVisitor<T> {
      * @return <tt>true</tt>, if the node should go on processing the children
      */
     boolean visit(JpqlCollectionValuedPath node, T data);
-
-    /**
-     * Called when visiting a <tt>JpqlTreatJoin</tt> node.
-     * @param node the current node
-     * @param data that may be needed by the visitor
-     * @return <tt>true</tt>, if the node should go on processing the children
-     */
-    boolean visit(JpqlTreatJoin node, T data);
 
     /**
      * Called when visiting a <tt>JpqlSetClause</tt> node.
@@ -584,14 +576,6 @@ public interface JpqlParserVisitor<T> {
     boolean visit(JpqlDivide node, T data);
 
     /**
-     * Called when visiting a <tt>JpqlNegative</tt> node.
-     * @param node the current node
-     * @param data that may be needed by the visitor
-     * @return <tt>true</tt>, if the node should go on processing the children
-     */
-    boolean visit(JpqlNegative node, T data);
-
-    /**
      * Called when visiting a <tt>JpqlConcat</tt> node.
      * @param node the current node
      * @param data that may be needed by the visitor
@@ -902,14 +886,6 @@ public interface JpqlParserVisitor<T> {
      * @return <tt>true</tt>, if the node should go on processing the children
      */
     boolean visit(JpqlTrimCharacter node, T data);
-
-    /**
-     * Called when visiting a <tt>JpqlTreat</tt> node.
-     * @param node the current node
-     * @param data that may be needed by the visitor
-     * @return <tt>true</tt>, if the node should go on processing the children
-     */
-    boolean visit(JpqlTreat node, T data);
 
     /**
      * Called when visiting a <tt>JpqlAggregatePath</tt> node.

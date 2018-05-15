@@ -116,8 +116,7 @@ public class SecureEntityManagerFactory extends DelegatingEntityManagerFactory i
         if (accessRules != null) {
             return accessRules;
         }
-        return new AccessRulesParser(persistenceUnitName,
-                getMetamodel(),
+        return new AccessRulesParser(getMetamodel(),
                 newInstance(securityContextType),
                 newInstance(accessRulesProviderType)).parseAccessRules();
     }

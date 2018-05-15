@@ -37,10 +37,10 @@ import org.jpasecurity.jpql.parser.JpqlFetchJoin;
 import org.jpasecurity.jpql.parser.JpqlGroupBy;
 import org.jpasecurity.jpql.parser.JpqlHaving;
 import org.jpasecurity.jpql.parser.JpqlJoin;
+import org.jpasecurity.jpql.parser.JpqlJoinCondition;
 import org.jpasecurity.jpql.parser.JpqlSubselect;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
 import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.JpqlWith;
 import org.jpasecurity.jpql.parser.Node;
 import org.jpasecurity.util.SetHashMap;
 import org.jpasecurity.util.SetMap;
@@ -228,7 +228,7 @@ public class SimpleSubselectEvaluator extends AbstractSubselectEvaluator {
             throw new NotEvaluatableException("evaluation of subselect with OUTER JOIN ... WITH currenty not supported");
         }
 
-        JpqlWith withClause;
+        JpqlJoinCondition withClause;
         while ((withClause = getWithClause(node)) != null) {
             JpqlSubselect subselect = getSubselect(withClause);
             JpqlWhere whereClause = new JpqlCompiledStatement(subselect).getWhereClause();
@@ -247,13 +247,13 @@ public class SimpleSubselectEvaluator extends AbstractSubselectEvaluator {
     }
 
     private boolean containsWithClause(Node node) {
-        ValueHolder<JpqlWith> result = new ValueHolder<>();
+        ValueHolder<JpqlJoinCondition> result = new ValueHolder<>();
         node.visit(withClauseVisitor, result);
         return result.getValue() != null;
     }
 
-    private JpqlWith getWithClause(Node node) {
-        ValueHolder<JpqlWith> result = new ValueHolder<>();
+    private JpqlJoinCondition getWithClause(Node node) {
+        ValueHolder<JpqlJoinCondition> result = new ValueHolder<>();
         node.visit(withClauseVisitor, result);
         return result.getValue();
     }
@@ -330,8 +330,7 @@ public class SimpleSubselectEvaluator extends AbstractSubselectEvaluator {
 
         @Override
         public String toString() {
-            return new StringBuilder().append(type).append(" = ").append(replacementPath).append(" with root ")
-                    .append(rootReplacement).toString();
+            return String.valueOf(type) + " = " + replacementPath + " with root " + rootReplacement;
         }
     }
 
@@ -377,10 +376,10 @@ public class SimpleSubselectEvaluator extends AbstractSubselectEvaluator {
         }
     }
 
-    private static class WithClauseVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlWith>> {
+    private static class WithClauseVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlJoinCondition>> {
 
         @Override
-        public boolean visit(JpqlWith node, ValueHolder<JpqlWith> data) {
+        public boolean visit(JpqlJoinCondition node, ValueHolder<JpqlJoinCondition> data) {
             data.setValue(node);
             return false;
         }

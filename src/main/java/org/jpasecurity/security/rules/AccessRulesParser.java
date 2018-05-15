@@ -62,8 +62,7 @@ public class AccessRulesParser {
     private AccessRulesProvider accessRulesProvider;
     private AccessRulesCompiler compiler;
 
-    public AccessRulesParser(String persistenceUnitName,
-                             Metamodel metamodel,
+    public AccessRulesParser(Metamodel metamodel,
                              SecurityContext securityContext,
                              AccessRulesProvider accessRulesProvider) throws ParseException {
         this.metamodel = notNull(Metamodel.class, metamodel);
@@ -181,8 +180,8 @@ public class AccessRulesParser {
 
     private class PathVisitor extends JpqlVisitorAdapter<Set<Alias>> {
 
-        private final Alias alias;
         private final QueryPreparator queryPreparator = new QueryPreparator();
+        private final Alias alias;
 
         PathVisitor(Alias alias) {
             this.alias = alias;
@@ -200,7 +199,17 @@ public class AccessRulesParser {
 
         @Override
         public boolean visit(JpqlPath path, Set<Alias> declaredAliases) {
-            Alias a = new Alias(path.jjtGetChild(0).getValue().toLowerCase());
+            String unvisitedPath;
+            Node node = path.jjtGetChild(0);
+            if (node.jjtGetNumChildren() == 0) {
+                unvisitedPath = node.toString();
+            } else if (node.jjtGetNumChildren() == 1) {
+                unvisitedPath = node.jjtGetChild(0).getValue();
+            } else {
+                return false;
+            }
+
+            Alias a = new Alias(unvisitedPath);
             if (THIS_ALIAS.equals(a)) {
                 queryPreparator.replace(path.jjtGetChild(0), queryPreparator.createIdentificationVariable(alias));
             } else if (!declaredAliases.contains(a)
