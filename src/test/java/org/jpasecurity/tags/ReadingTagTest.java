@@ -22,11 +22,13 @@ import org.jpasecurity.AccessType;
  */
 public class ReadingTagTest extends AbstractEntityTagTestCase {
 
-    public AbstractEntityTag createEntityTag() {
+    @Override
+    protected AbstractEntityTag createEntityTag() {
         return new ReadingTag();
     }
 
-    public AccessType getAccessType() {
+    @Override
+    protected AccessType getAccessType() {
         return AccessType.READ;
     }
 }

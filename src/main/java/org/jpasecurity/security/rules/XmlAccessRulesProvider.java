@@ -29,7 +29,6 @@ import org.jpasecurity.util.ListHashMap;
 import org.jpasecurity.util.ListMap;
 import org.jpasecurity.xml.AbstractXmlParser;
 import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
@@ -66,7 +65,7 @@ public class XmlAccessRulesProvider implements AccessRulesProvider {
         return accessRules;
     }
 
-    private static class RulesParser extends AbstractXmlParser<XmlAccessRulesProvider.RulesParser.RulesHandler> {
+    private static class RulesParser extends AbstractXmlParser<XmlAccessRulesProvider.RulesHandler> {
 
         private String persistenceUnitName;
 
@@ -78,44 +77,44 @@ public class XmlAccessRulesProvider implements AccessRulesProvider {
         public List<String> getAccessRules() {
             return getHandler().getAccessRules(persistenceUnitName);
         }
+    }
 
-        private static class RulesHandler extends DefaultHandler {
+    private static class RulesHandler extends DefaultHandler {
 
-            private static final String PERSISTENCE_UNIT_TAG = "persistence-unit";
+        private static final String PERSISTENCE_UNIT_TAG = "persistence-unit";
 
-            private static final String PERSISTENCE_UNIT_NAME_ATTRIBUTE = "name";
+        private static final String PERSISTENCE_UNIT_NAME_ATTRIBUTE = "name";
 
-            private static final String ACCESS_RULE_TAG = "access-rule";
+        private static final String ACCESS_RULE_TAG = "access-rule";
 
-            private ListMap<String, String> accessRules = new ListHashMap<String, String>();
+        private ListMap<String, String> accessRules = new ListHashMap<>();
 
-            private String persistenceUnit;
+        private String persistenceUnit;
 
-            private StringBuilder accessRule = new StringBuilder();
+        private StringBuilder accessRule = new StringBuilder();
 
-            public List<String> getAccessRules(String persistenceUnit) {
-                return accessRules.getNotNull(persistenceUnit);
+        List<String> getAccessRules(String persistenceUnit) {
+            return accessRules.getNotNull(persistenceUnit);
+        }
+
+        @Override
+        public void startElement(String uri, String tag, String qualified, Attributes attributes) {
+            if (PERSISTENCE_UNIT_TAG.equals(qualified)) {
+                persistenceUnit = attributes.getValue(PERSISTENCE_UNIT_NAME_ATTRIBUTE);
+            } else if (ACCESS_RULE_TAG.equals(qualified)) {
+                accessRule.setLength(0);
             }
+        }
 
-            public void startElement(String uri, String tag, String qualified, Attributes attributes)
-                throws SAXException {
-                if (PERSISTENCE_UNIT_TAG.equals(qualified)) {
-                    persistenceUnit = attributes.getValue(PERSISTENCE_UNIT_NAME_ATTRIBUTE);
-                } else if (ACCESS_RULE_TAG.equals(qualified)) {
-                    accessRule.setLength(0);
-                }
-            }
+        @Override
+        public void characters(char[] chars, int start, int length) {
+            accessRule.append(chars, start, length);
+        }
 
-            public void characters(char[] chars, int start, int length)
-                throws SAXException {
-                accessRule.append(chars, start, length);
-            }
-
-            public void endElement(String uri, String tag, String qualified)
-                throws SAXException {
-                if (ACCESS_RULE_TAG.equals(qualified)) {
-                    accessRules.add(persistenceUnit, accessRule.toString());
-                }
+        @Override
+        public void endElement(String uri, String tag, String qualified) {
+            if (ACCESS_RULE_TAG.equals(qualified)) {
+                accessRules.add(persistenceUnit, accessRule.toString());
             }
         }
     }

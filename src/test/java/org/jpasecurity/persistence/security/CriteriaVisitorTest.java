@@ -32,7 +32,6 @@ import javax.persistence.criteria.Root;
 import javax.persistence.metamodel.EntityType;
 import javax.persistence.metamodel.Metamodel;
 
-import org.jpasecurity.SecurityContext;
 import org.jpasecurity.access.DefaultAccessManager;
 import org.jpasecurity.jpql.parser.JpqlParser;
 import org.jpasecurity.jpql.parser.ParseException;
@@ -41,32 +40,38 @@ import org.jpasecurity.security.AccessRule;
 import org.jpasecurity.security.rules.AccessRulesCompiler;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 
 /**
  * @author Arne Limburg
  */
 public class CriteriaVisitorTest {
 
-    private Metamodel metamodel;
-    private SecurityContext securityContext;
+    @Rule
+    private MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
+
+    @Mock
     private DefaultAccessManager accessManager;
+
+    @Mock
+    private Metamodel metamodel;
+
     private JpqlParser parser;
     private AccessRulesCompiler compiler;
     private CriteriaVisitor criteriaVisitor;
     private EntityManagerFactory entityManagerFactory;
-    private TestBean bean1;
-    private TestBean bean2;
 
     @Before
     public void initialize() throws ParseException {
-        metamodel = mock(Metamodel.class);
         EntityType testBeanType = mock(EntityType.class);
         when(metamodel.getEntities()).thenReturn(Collections.<EntityType<?>>singleton(testBeanType));
         when(testBeanType.getName()).thenReturn(TestBean.class.getSimpleName());
         when(testBeanType.getJavaType()).thenReturn(TestBean.class);
-        securityContext = mock(SecurityContext.class);
-        accessManager = mock(DefaultAccessManager.class);
         DefaultAccessManager.Instance.register(accessManager);
 
         parser = new JpqlParser();
@@ -75,10 +80,8 @@ public class CriteriaVisitorTest {
         criteriaVisitor = new CriteriaVisitor(metamodel, entityManagerFactory.getCriteriaBuilder());
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
-        bean1 = new TestBean();
-        bean2 = new TestBean();
-        entityManager.persist(bean1);
-        entityManager.persist(bean2);
+        entityManager.persist(new TestBean());
+        entityManager.persist(new TestBean());
         entityManager.getTransaction().commit();
         entityManager.close();
     }

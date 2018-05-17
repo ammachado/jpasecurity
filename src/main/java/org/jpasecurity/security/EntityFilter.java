@@ -137,7 +137,6 @@ public class EntityFilter implements AccessManager {
     }
 
     public FilterResult<String> filterQuery(String query, AccessType accessType) {
-
         LOG.debug("Filtering query {}", query);
 
         JpqlCompiledStatement statement = compile(query);

@@ -289,7 +289,7 @@ public class SimpleSubselectEvaluator extends AbstractSubselectEvaluator {
         return result.getValue() != null;
     }
 
-    protected class Replacement {
+    protected static class Replacement {
 
         private TypeDefinition type;
         private Node replacementRoot;
@@ -334,7 +334,7 @@ public class SimpleSubselectEvaluator extends AbstractSubselectEvaluator {
         }
     }
 
-    private class ReplacementVisitor extends JpqlVisitorAdapter<Set<Replacement>> {
+    private static class ReplacementVisitor extends JpqlVisitorAdapter<Set<Replacement>> {
 
         @Override
         public boolean visit(JpqlEquals node, Set<Replacement> replacements) {

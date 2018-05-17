@@ -27,7 +27,7 @@ import org.jpasecurity.model.FieldAccessAnnotationTestBean;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -37,8 +37,8 @@ public class CriteriaAccessRulesGeneratorTest {
 
     public static final String USER = "user";
 
-    @Rule
-    public TestEntityManager entityManager
+    @ClassRule
+    public static final TestEntityManager entityManager
         = new TestEntityManager("annotation-based-field-access-criteria-access-rules-test");
 
     private CriteriaBuilder criteriaBuilder;

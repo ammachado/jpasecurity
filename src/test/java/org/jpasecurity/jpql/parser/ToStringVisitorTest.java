@@ -19,7 +19,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,11 +34,10 @@ public class ToStringVisitorTest {
     private ToStringVisitor toStringVisitor;
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void toStringVisitor() throws ParseException {
         assertJpql("SELECT bean FROM TestBean bean WHERE bean.id = :id");
         assertJpql("SELECT COUNT(bean) FROM TestBean bean WHERE bean.id = :id");
-        assertJpql("SELECT COUNT( DISTINCT bean.id) FROM TestBean bean WHERE bean.id = :id");
+        assertJpql("SELECT COUNT(DISTINCT bean.id) FROM TestBean bean WHERE bean.id = :id");
         assertJpql("SELECT AVG(bean) FROM TestBean bean WHERE bean.id = :id");
         assertJpql("SELECT SUM(bean) FROM TestBean bean WHERE bean.id = :id");
         assertJpql("SELECT bean FROM org.jpasecurity.model.TestBean bean WHERE bean.id = :id");
@@ -48,7 +46,7 @@ public class ToStringVisitorTest {
         assertJpql("SELECT bean FROM TestBean bean LEFT OUTER JOIN FETCH bean.name beanName WHERE bean.id = :id");
         assertJpql("SELECT bean FROM TestBean bean INNER JOIN bean.name name WHERE bean.id = :id");
         assertJpql("SELECT bean FROM TestBean bean INNER JOIN FETCH bean.name WHERE bean.id = :id");
-        assertJpql("SELECT bean FROM TestBean bean INNER JOIN bean.parent parent WITH parent.name = 'Parent' "
+        assertJpql("SELECT bean FROM TestBean bean INNER JOIN bean.parent parent ON parent.name = 'Parent' "
                    + "WHERE bean.id = :id");
         assertJpql("SELECT bean FROM TestBean bean WHERE (bean.id BETWEEN 5 AND 7)");
         assertJpql("SELECT bean FROM TestBean bean WHERE (bean.id NOT BETWEEN 5 AND 7)");
@@ -152,13 +150,11 @@ public class ToStringVisitorTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
-    public void  parseWhereCoalesceEquals1Expression() {
+    public void parseWhereCoalesceEquals1Expression() {
         assertJpql("SELECT bean FROM TestBean bean WHERE COALESCE(bean.name, 'Horst') = 'Horst'");
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void parseWhereCoalesceEquals2Expression() {
         assertJpql("SELECT bean FROM TestBean bean WHERE 'Horst' = COALESCE(bean.name, 'Horst')");
     }
@@ -244,7 +240,7 @@ public class ToStringVisitorTest {
 
     @Test
     public void parseWhereUpperEqualsFunctions() {
-        assertJpql("SELECT bean FROM TestBean bean WHERE UPPER(bean.name) = ('Horst')");
+        assertJpql("SELECT bean FROM TestBean bean WHERE UPPER(bean.name) = 'Horst'");
     }
 
     @Test

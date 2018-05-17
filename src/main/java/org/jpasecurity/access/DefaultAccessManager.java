@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.persistence.PersistenceException;
 import javax.persistence.metamodel.EntityType;
 import javax.persistence.metamodel.Metamodel;
 
@@ -66,8 +67,7 @@ public class DefaultAccessManager implements AccessManager {
             entity = ReflectionUtils.newInstance(javaType, parameters);
         } catch (RuntimeException e) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Constructor of {} threw exception, hence isAccessible returns false.",
-                        javaType, e);
+                LOG.debug("Constructor of {} threw exception, hence isAccessible returns false.", javaType, e);
             } else {
                 LOG.info("Constructor of {} threw exception (\"{}\"), hence isAccessible returns false.",
                         javaType, e.getMessage(), e);
@@ -104,6 +104,9 @@ public class DefaultAccessManager implements AccessManager {
         } catch (SecurityException e) {
             abortCheck();
             throw e;
+        } catch (Exception e) {
+            LOG.error(e.getLocalizedMessage(), e);
+            throw new PersistenceException(e);
         } finally {
             endCheck();
         }

@@ -29,17 +29,15 @@ import javax.persistence.Query;
 import org.jpasecurity.model.MethodAccessAnnotationTestBean;
 import org.jpasecurity.model.acl.PrivilegeType;
 import org.jpasecurity.security.authentication.TestSecurityContext;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author Arne Limburg
  */
-@Ignore
 public class QueryTest {
 
-    public static final String USER1 = "user1";
-    public static final String USER2 = "user2";
+    private static final String USER1 = "user1";
+    private static final String USER2 = "user2";
 
     @Test
     public void testEmptyResult() {
@@ -64,7 +62,7 @@ public class QueryTest {
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("acl-model");
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         Query query = entityManager.createQuery("select bean from Privilege bean WHERE bean.type in (:TYPES)");
-        final ArrayList<PrivilegeType> types = new ArrayList<PrivilegeType>();
+        final ArrayList<PrivilegeType> types = new ArrayList<>();
         types.add(PrivilegeType.DATA);
         types.add(PrivilegeType.METHOD);
         query.setParameter("TYPES", types);
@@ -88,7 +86,7 @@ public class QueryTest {
         entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
         List<Object[]> result
-            = entityManager.createQuery("select bean.name, bean.parent from MethodAccessAnnotationTestBean bean")
+            = entityManager.createQuery("select bean.name, bean.parent from MethodAccessAnnotationTestBean bean", Object[].class)
                            .getResultList();
         assertEquals(1, result.size());
         assertEquals(USER1, result.get(0)[0]);
@@ -116,8 +114,8 @@ public class QueryTest {
         entityManager.getTransaction().begin();
         List<MethodAccessAnnotationTestBean> result
             = entityManager.createQuery("select bean from MethodAccessAnnotationTestBean bean "
-                                        + "join bean.parent parent with parent.name = '" + USER1 + "' "
-                                        + "where bean.name = :name")
+                                        + "join bean.parent parent on parent.name = '" + USER1 + "' "
+                                        + "where bean.name = :name", MethodAccessAnnotationTestBean.class)
                            .setParameter("name", USER1)
                            .getResultList();
         assertEquals(1, result.size());

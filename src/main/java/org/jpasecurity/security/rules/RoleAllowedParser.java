@@ -31,12 +31,13 @@ import org.jpasecurity.util.SetMap;
 public class RoleAllowedParser extends AbstractAnnotationParser<RoleAllowed, SetMap<Set<AccessType>, String>> {
 
     public SetMap<Set<AccessType>, String> parseAllowedRoles(Class<?> annotatedClass) {
-        SetMap<Set<AccessType>, String> rolesAllowed = new SetHashMap<Set<AccessType>, String>();
+        SetMap<Set<AccessType>, String> rolesAllowed = new SetHashMap<>();
         parse(annotatedClass, rolesAllowed);
         return rolesAllowed;
     }
 
+    @Override
     protected void process(RoleAllowed roleAllowed, SetMap<Set<AccessType>, String> rolesAllowed) {
-        rolesAllowed.add(new HashSet<AccessType>(Arrays.asList(roleAllowed.access())), roleAllowed.role());
+        rolesAllowed.add(new HashSet<>(Arrays.asList(roleAllowed.access())), roleAllowed.role());
     }
 }

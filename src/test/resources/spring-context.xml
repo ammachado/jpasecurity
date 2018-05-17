@@ -86,8 +86,8 @@
     </bean>
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"
-          p:driverClassName="org.hsqldb.jdbcDriver"
-          p:url="jdbc:hsqldb:mem:contacts"
+          p:driverClassName="org.h2.Driver"
+          p:url="jdbc:h2:mem:contacts"
           p:username="sa"
           p:password=""/>
 

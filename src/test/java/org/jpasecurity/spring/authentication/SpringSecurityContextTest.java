@@ -15,7 +15,7 @@
  */
 package org.jpasecurity.spring.authentication;
 
-import static org.mockito.BDDMockito.willReturn;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -47,8 +47,7 @@ public class SpringSecurityContextTest extends AbstractSecurityContextTest {
         }
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(principal);
-
-        willReturn(grantedAuthorities).given(authentication).getAuthorities();
+        doReturn(grantedAuthorities).when(authentication).getAuthorities();
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }

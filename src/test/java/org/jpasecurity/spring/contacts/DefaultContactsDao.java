@@ -33,11 +33,14 @@ public class DefaultContactsDao implements ContactsDao {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Override
     @PostFilter("hasPermission(filterObject, 'READ')")
     public List<User> getAllUsers() {
-        return entityManager.createQuery("SELECT user FROM User user").getResultList();
+        return entityManager.createQuery("SELECT user FROM User user", User.class)
+                            .getResultList();
     }
 
+    @Override
     @PostAuthorize("hasPermission(returnObject, 'READ')")
     public User getUser(String name) {
         return (User)entityManager.createQuery("SELECT user FROM User user WHERE user.name = :name")
@@ -45,9 +48,10 @@ public class DefaultContactsDao implements ContactsDao {
                                   .getSingleResult();
     }
 
+    @Override
     @PostFilter("hasPermission(filterObject, 'READ')")
     public List<Contact> getAllContacts() {
         String query = "SELECT contact FROM Contact contact INNER JOIN FETCH contact.owner user";
-        return entityManager.createQuery(query).getResultList();
+        return entityManager.createQuery(query, Contact.class).getResultList();
     }
 }

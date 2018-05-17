@@ -38,6 +38,7 @@ public class EjbSecurityContext extends AbstractRoleBasedSecurityContext {
         }
     }
 
+    @Override
     protected Principal getCallerPrincipal() {
         try {
             return context.getCallerPrincipal();
@@ -46,6 +47,7 @@ public class EjbSecurityContext extends AbstractRoleBasedSecurityContext {
         }
     }
 
+    @Override
     protected boolean isCallerInRole(String roleName) {
         try {
             return context.isCallerInRole(roleName);

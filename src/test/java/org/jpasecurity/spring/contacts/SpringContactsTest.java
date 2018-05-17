@@ -61,7 +61,7 @@ public class SpringContactsTest {
         applicationContext = new ClassPathXmlApplicationContext("spring-context.xml");
         contactsDao = applicationContext.getBean(ContactsDao.class);
         authenticationManager = applicationContext.getBean(AuthenticationManager.class);
-        aclService = applicationContext.getBean(MutableAclService.class);
+        MutableAclService aclService = applicationContext.getBean(MutableAclService.class);
         PlatformTransactionManager transactionManager = applicationContext.getBean(PlatformTransactionManager.class);
         EntityManagerFactory entityManagerFactory = applicationContext.getBean(EntityManagerFactory.class);
         EntityManager entityManager = entityManagerFactory.createEntityManager();
@@ -81,8 +81,8 @@ public class SpringContactsTest {
 
     @After
     public void tearDown() {
-        EntityManagerFactory entityManagerFactory
-            = ((EntityManagerFactory)applicationContext.getBean("entityManagerFactory"));
+        EntityManagerFactory entityManagerFactory = applicationContext
+                .getBean(EntityManagerFactory.class, "entityManagerFactory");
         testData.clearTestData(entityManagerFactory);
         SecurityContextHolder.getContext().setAuthentication(null);
         applicationContext.close();
@@ -155,8 +155,8 @@ public class SpringContactsTest {
     }
 
     private void authenticate(String userName) {
-        Authentication authentication
-            = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userName, ""));
+        Authentication authentication = authenticationManager
+                .authenticate(new UsernamePasswordAuthenticationToken(userName, ""));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }

@@ -59,7 +59,7 @@ public class AccessRulesCompiler extends JpqlCompiler {
         if (!getPositionalParameters(rule).isEmpty()) {
             throw new PersistenceException("Positional parameters are not allowed for access rules");
         }
-        Set<AccessRule> accessRules = new HashSet<AccessRule>();
+        Set<AccessRule> accessRules = new HashSet<>();
         for (TypeDefinition typeDefinition: typeDefinitions) {
             accessRules.add(new AccessRule(rule, typeDefinition));
         }

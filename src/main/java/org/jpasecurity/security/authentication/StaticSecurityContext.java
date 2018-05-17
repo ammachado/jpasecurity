@@ -50,8 +50,8 @@ public class StaticSecurityContext implements SecurityContext {
      * @param roles the roles
      */
     public static void authenticate(Object principal, Collection<?> roles) {
-        register(new Alias("CURRENT_PRINCIPAL"), principal);
-        register(new Alias("CURRENT_ROLES"), roles);
+        register(SecurityContext.CURRENT_PRINCIPAL, principal);
+        register(SecurityContext.CURRENT_ROLES, roles);
     }
 
     public static void register(Alias alias, Object value) {

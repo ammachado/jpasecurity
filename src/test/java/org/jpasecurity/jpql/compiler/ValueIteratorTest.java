@@ -66,14 +66,14 @@ public class ValueIteratorTest {
 
     @Before
     public void initializeTypeDefinitions() {
-        typeDefinitions = new HashSet<TypeDefinition>();
+        typeDefinitions = new HashSet<>();
         typeDefinitions.add(new TypeDefinition(BEAN1, MethodAccessTestBean.class));
         typeDefinitions.add(new TypeDefinition(PARENT1, MethodAccessTestBean.class, new Path("bean1.parent"), true));
         typeDefinitions.add(new TypeDefinition(CHILD1, MethodAccessTestBean.class, new Path("bean1.children"), false));
         typeDefinitions.add(new TypeDefinition(BEAN2, MethodAccessTestBean.class));
         typeDefinitions.add(new TypeDefinition(PARENT2, MethodAccessTestBean.class, new Path("bean2.parent"), false));
         typeDefinitions.add(new TypeDefinition(CHILD2, MethodAccessTestBean.class, new Path("bean2.children"), true));
-        possibleValues = new SetHashMap<Alias, Object>();
+        possibleValues = new SetHashMap<>();
     }
 
     @Test
@@ -546,20 +546,20 @@ public class ValueIteratorTest {
         }
     }
 
-    private class PathEvaluatorFactory {
+    private static class PathEvaluatorFactory {
 
         private MethodAccessTestBean[] beans;
 
-        public PathEvaluatorFactory withBeans(MethodAccessTestBean... beans) {
+        PathEvaluatorFactory withBeans(MethodAccessTestBean... beans) {
             this.beans = beans;
             return this;
         }
 
-        public PathEvaluatorFactory withNoBeans() {
+        PathEvaluatorFactory withNoBeans() {
             return withBeans();
         }
 
-        public PathEvaluatorFactory withBean(MethodAccessTestBean bean) {
+        PathEvaluatorFactory withBean(MethodAccessTestBean bean) {
             return withBeans(bean);
         }
 
@@ -575,7 +575,7 @@ public class ValueIteratorTest {
         }
     }
 
-    private class ParentAnswer implements Answer<List<Object>> {
+    private static class ParentAnswer implements Answer<List<Object>> {
 
         private MethodAccessTestBean bean;
 
@@ -583,6 +583,7 @@ public class ValueIteratorTest {
             this.bean = bean;
         }
 
+        @Override
         public List<Object> answer(InvocationOnMock invocation) throws Throwable {
             return bean.getParent() == null
                    ? Collections.emptyList()
@@ -590,7 +591,7 @@ public class ValueIteratorTest {
         }
     }
 
-    private class ChildrenAnswer implements Answer<List<Object>> {
+    private static class ChildrenAnswer implements Answer<List<Object>> {
 
         private MethodAccessTestBean bean;
 
@@ -598,6 +599,7 @@ public class ValueIteratorTest {
             this.bean = bean;
         }
 
+        @Override
         public List<Object> answer(InvocationOnMock invocation) throws Throwable {
             return bean.getChildren() == null || bean.getChildren().isEmpty()
                    ? Collections.emptyList()

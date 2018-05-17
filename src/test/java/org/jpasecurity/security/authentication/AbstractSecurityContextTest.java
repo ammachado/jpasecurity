@@ -48,13 +48,13 @@ public abstract class AbstractSecurityContextTest {
 
     protected void assertUnauthenticated() {
         SecurityContext securityContext = createSecurityContext();
-        assertNull(securityContext.getAliasValue(new Alias("CURRENT_PRINCIPAL")));
-        assertEquals(0, securityContext.getAliasValues(new Alias("CURRENT_ROLES")).size());
+        assertNull(securityContext.getAliasValue(SecurityContext.CURRENT_PRINCIPAL));
+        assertEquals(0, securityContext.getAliasValues(SecurityContext.CURRENT_ROLES).size());
     }
 
     protected void assertAuthenticated(SecurityContext securityContext) {
-        assertEquals(USER, securityContext.getAliasValue(new Alias("CURRENT_PRINCIPAL")));
-        assertEquals(2, securityContext.getAliasValues(new Alias("CURRENT_ROLES")).size());
-        assertTrue(securityContext.getAliasValues(new Alias("CURRENT_ROLES")).containsAll(Arrays.asList(ROLE1, ROLE2)));
+        assertEquals(USER, securityContext.getAliasValue(SecurityContext.CURRENT_PRINCIPAL));
+        assertEquals(2, securityContext.getAliasValues(SecurityContext.CURRENT_ROLES).size());
+        assertTrue(securityContext.getAliasValues(SecurityContext.CURRENT_ROLES).containsAll(Arrays.asList(ROLE1, ROLE2)));
     }
 }

@@ -24,13 +24,13 @@ import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.model.EagerParent;
 import org.jpasecurity.model.LazyChild;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 public class LazyOneToOneTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("lazy-one-to-one");
+    @ClassRule
+    public static final TestEntityManager entityManager = new TestEntityManager("lazy-one-to-one");
 
     private LazyChild child;
 

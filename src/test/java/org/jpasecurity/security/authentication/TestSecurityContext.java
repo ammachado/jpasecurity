@@ -18,6 +18,7 @@ package org.jpasecurity.security.authentication;
 import java.util.Collections;
 
 import org.jpasecurity.Alias;
+import org.jpasecurity.SecurityContext;
 
 /**
  * @author Arne Limburg
@@ -30,7 +31,7 @@ public class TestSecurityContext extends StaticSecurityContext {
 
     public static void unauthenticate() {
         StaticSecurityContext.unauthenticate();
-        register(new Alias("CURRENT_PRINCIPAL"), null);
-        register(new Alias("CURRENT_ROLES"), Collections.emptySet());
+        register(SecurityContext.CURRENT_PRINCIPAL, null);
+        register(SecurityContext.CURRENT_ROLES, Collections.emptySet());
     }
 }

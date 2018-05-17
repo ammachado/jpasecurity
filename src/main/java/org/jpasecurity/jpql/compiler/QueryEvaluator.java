@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
@@ -81,6 +82,7 @@ import org.jpasecurity.jpql.parser.JpqlNamedInputParameter;
 import org.jpasecurity.jpql.parser.JpqlNot;
 import org.jpasecurity.jpql.parser.JpqlNotEquals;
 import org.jpasecurity.jpql.parser.JpqlNullif;
+import org.jpasecurity.jpql.parser.JpqlNumericLiteral;
 import org.jpasecurity.jpql.parser.JpqlOr;
 import org.jpasecurity.jpql.parser.JpqlOrderBy;
 import org.jpasecurity.jpql.parser.JpqlPath;
@@ -103,7 +105,7 @@ import org.jpasecurity.jpql.parser.JpqlValue;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
 import org.jpasecurity.jpql.parser.JpqlWhen;
 import org.jpasecurity.jpql.parser.Node;
-import org.jpasecurity.jpql.parser.SimpleNode;
+import org.jpasecurity.jpql.parser.ParseException;
 import org.jpasecurity.persistence.mapping.ManagedTypeFilter;
 
 /**
@@ -115,8 +117,8 @@ import org.jpasecurity.persistence.mapping.ManagedTypeFilter;
  */
 public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters> {
 
-    public static final int DECIMAL_PRECISION = 100;
-    public static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
+    private static final int DECIMAL_PRECISION = 100;
+    private static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
 
     private final JpqlCompiler compiler;
     private final SecurePersistenceUnitUtil util;
@@ -479,7 +481,7 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
             } else {
                 node.jjtGetChild(1).visit(this, data);
                 Object value2 = data.getResult();
-                data.setResult(!value1.equals(value2));
+                data.setResult(!Objects.equals(value1, value2));
             }
         } catch (NotEvaluatableException e) {
             //result is undefined, which is ok here
@@ -522,10 +524,10 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
         validateChildCount(node, 2);
         try {
             node.jjtGetChild(0).visit(this, data);
-            Comparable<Object> value1 = data.getResult();
+            Comparable<Number> value1 = data.getResult();
             node.jjtGetChild(1).visit(this, data);
-            Comparable<Object> value2 = data.getResult();
-            data.setResult(value1.compareTo(value2) < 0);
+            Comparable<Number> value2 = data.getResult();
+            data.setResult(value1.compareTo((Number)value2) < 0);
         } catch (NotEvaluatableException e) {
             //result is undefined, which is ok here
         }
@@ -838,6 +840,30 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
     }
 
     @Override
+    public boolean visit(JpqlNumericLiteral node, QueryEvaluationParameters data) {
+        validateChildCount(node, 1);
+        final String nodeValue = node.getValue().replaceAll("[bBdDfFiIlL]", "");
+        
+        final Node child = node.jjtGetChild(0);
+        if (child instanceof JpqlIntegerLiteral) {
+            data.setResult(Integer.valueOf(nodeValue));
+        } else if (child instanceof JpqlLongLiteral) {
+            data.setResult(Long.valueOf(nodeValue));
+        } else if (child instanceof JpqlBigIntegerLiteral) {
+            data.setResult(new BigInteger(nodeValue));
+        } else if (child instanceof JpqlFloatLiteral) {
+            data.setResult(Float.valueOf(nodeValue));
+        } else if (child instanceof JpqlDoubleLiteral) {
+            data.setResult(Double.valueOf(nodeValue));
+        } else if (child instanceof JpqlBigDecimalLiteral) {
+            data.setResult(new BigDecimal(nodeValue));
+        } else {
+            throw new RuntimeException("Invalid numeric literal");
+        }
+        return false;
+    }
+
+    @Override
     public boolean visit(JpqlIntegerLiteral node, QueryEvaluationParameters data) {
         validateChildCount(node, 0);
         data.setResult(Integer.valueOf(node.getValue()));
@@ -1034,7 +1060,7 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
                 }
             }
         }
-        return visit((SimpleNode)node.jjtGetChild(node.jjtGetNumChildren() - 1));
+        return visit(node.jjtGetChild(node.jjtGetNumChildren() - 1));
     }
 
     @Override
@@ -1095,16 +1121,6 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
         }
     }
 
-    protected Collection<?> getResultCollection(Object result) {
-        if (result == null) {
-            return Collections.emptySet();
-        } else if (result instanceof Collection) {
-            return (Collection<Object>)result;
-        } else {
-            return Collections.singleton(result);
-        }
-    }
-
     private Collection<?> convertAll(Collection<?> collection) {
         Collection<Object> result = new ArrayList<>(collection.size());
         for (Object value: collection) {
@@ -1113,7 +1129,7 @@ public class QueryEvaluator extends JpqlVisitorAdapter<QueryEvaluationParameters
         return result;
     }
 
-    private Object convert(Object object) {
+    private static Object convert(Object object) {
         if (!(object instanceof Number) || object instanceof BigDecimal) {
             return object;
         } else if (object instanceof Float) {

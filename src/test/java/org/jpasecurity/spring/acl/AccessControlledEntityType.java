@@ -33,6 +33,7 @@ public class AccessControlledEntityType {
     @Id
     @GeneratedValue
     private long id;
+
     @Column(name = "class", unique = true)
     private String className;
 

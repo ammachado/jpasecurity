@@ -32,7 +32,7 @@ public class SecureQueryTest {
 
     @Test
     public void testHandleConstructorReturnTypePPMatchingType()
-        throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        throws InvocationTargetException, InstantiationException, IllegalAccessException {
         SecureQuery<IdAndNameDto> simpleDtoSecureQuery = createSecureQuery(IdAndNameDto.class);
         IdAndNameDto source = new IdAndNameDto(1, "simple");
         IdAndNameDto result = simpleDtoSecureQuery.handleConstructorReturnType(source);
@@ -41,7 +41,7 @@ public class SecureQueryTest {
 
     @Test
     public void testHandleConstructorReturnTypePPCompatibleParameterSingleValue()
-        throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        throws InvocationTargetException, InstantiationException, IllegalAccessException {
         SecureQuery<IdDto> simpleDtoSecureQuery = createSecureQuery(IdDto.class);
         IdDto result = simpleDtoSecureQuery.handleConstructorReturnType(1);
         assertEquals(1, result.getId().longValue());
@@ -49,7 +49,7 @@ public class SecureQueryTest {
 
     @Test
     public void testHandleConstructorReturnTypePPCompatibleParameterArray()
-        throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        throws InvocationTargetException, InstantiationException, IllegalAccessException {
         SecureQuery<IdAndNameDto> simpleDtoSecureQuery = createSecureQuery(IdAndNameDto.class);
         IdAndNameDto result = simpleDtoSecureQuery.handleConstructorReturnType(new Object[]{1, "Test"});
         assertEquals(1, result.getId().longValue());
@@ -58,7 +58,7 @@ public class SecureQueryTest {
 
     @Test
     public void testHandleConstructorReturnTypePPCompatibleParameterSingleValuedArray()
-        throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        throws InvocationTargetException, InstantiationException, IllegalAccessException {
         SecureQuery<IdDto> simpleDtoSecureQuery = createSecureQuery(IdDto.class);
         IdDto result = simpleDtoSecureQuery.handleConstructorReturnType(new Object[]{1});
         assertEquals(1, result.getId().longValue());
@@ -66,33 +66,27 @@ public class SecureQueryTest {
 
     @Test(expected = PersistenceException.class)
     public void testHandleConstructorReturnTypePPInCompatibleParameterSingleValue()
-        throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        throws InvocationTargetException, InstantiationException, IllegalAccessException {
         SecureQuery<IdAndNameDto> simpleDtoSecureQuery = createSecureQuery(IdAndNameDto.class);
         simpleDtoSecureQuery.handleConstructorReturnType(1);
     }
 
     @Test(expected = PersistenceException.class)
     public void testHandleConstructorReturnTypePPIncompatibleParameterArray()
-        throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        throws InvocationTargetException, InstantiationException, IllegalAccessException {
         SecureQuery<IdDto> simpleDtoSecureQuery = createSecureQuery(IdDto.class);
         simpleDtoSecureQuery.handleConstructorReturnType(new Object[]{1, "Test"});
     }
 
     @Test(expected = PersistenceException.class)
     public void testHandleConstructorReturnTypePPNotMatchingTypeType()
-        throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-        SecureQuery<IdDto> simpleDtoSecureQuery = new SecureQuery<>(
-                mock(Query.class),
-                IdDto.class
-        );
+        throws InvocationTargetException, InstantiationException, IllegalAccessException {
+        SecureQuery<IdDto> simpleDtoSecureQuery = new SecureQuery<>(mock(Query.class), IdDto.class);
         IdAndNameDto source = new IdAndNameDto(1, "simple");
         simpleDtoSecureQuery.handleConstructorReturnType(source);
     }
 
     private <T> SecureQuery<T> createSecureQuery(Class<T> queryClassType) {
-        return new SecureQuery<>(
-                mock(Query.class),
-                queryClassType
-        );
+        return new SecureQuery<>(mock(Query.class), queryClassType);
     }
 }

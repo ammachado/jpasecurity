@@ -59,8 +59,8 @@ public class AutodetectingSecurityContextTest {
         when(mock.getAliasValue(AbstractRoleBasedSecurityContext.CURRENT_PRINCIPAL)).thenReturn(user);
         when(mock.getAliasValues(AbstractRoleBasedSecurityContext.CURRENT_ROLES)).thenReturn(Collections.emptySet());
 
-        assertSame(user, authenticationProvider.getAliasValue(new Alias("CURRENT_PRINCIPAL")));
-        assertSame(Collections.EMPTY_SET, authenticationProvider.getAliasValues(new Alias("CURRENT_ROLES")));
+        assertSame(user, authenticationProvider.getAliasValue(SecurityContext.CURRENT_PRINCIPAL));
+        assertSame(Collections.EMPTY_SET, authenticationProvider.getAliasValues(SecurityContext.CURRENT_ROLES));
     }
 
     @Test

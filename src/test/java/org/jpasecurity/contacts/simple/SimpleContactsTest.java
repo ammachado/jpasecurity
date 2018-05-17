@@ -78,7 +78,6 @@ public class SimpleContactsTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void getUnauthenticated() {
         assertEquals(0, getAllUsers().size());
         try {
@@ -165,7 +164,7 @@ public class SimpleContactsTest {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
             entityManager.getTransaction().begin();
-            List<User> users = entityManager.createQuery("SELECT user FROM User user").getResultList();
+            List<User> users = entityManager.createQuery("SELECT user FROM User user", User.class).getResultList();
             entityManager.getTransaction().commit();
             return users;
         } catch (RuntimeException e) {
@@ -180,9 +179,9 @@ public class SimpleContactsTest {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
             entityManager.getTransaction().begin();
-            User user = (User)entityManager.createQuery("SELECT user FROM User user WHERE user.name = :name")
-                                           .setParameter("name", name)
-                                           .getSingleResult();
+            User user = entityManager.createQuery("SELECT user FROM User user WHERE user.name = :name", User.class)
+                    .setParameter("name", name)
+                    .getSingleResult();
             entityManager.getTransaction().commit();
             return user;
         } catch (RuntimeException e) {
@@ -197,7 +196,8 @@ public class SimpleContactsTest {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
             entityManager.getTransaction().begin();
-            List<Contact> contacts = entityManager.createQuery("SELECT contact FROM Contact contact").getResultList();
+            List<Contact> contacts = entityManager.createQuery("SELECT contact FROM Contact contact", Contact.class)
+                    .getResultList();
             entityManager.getTransaction().commit();
             return contacts;
         } catch (RuntimeException e) {

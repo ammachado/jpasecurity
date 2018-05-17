@@ -37,7 +37,6 @@ import org.jpasecurity.model.MethodAccessAnnotationTestBean;
 import org.jpasecurity.persistence.ParentChildTestData;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -115,7 +114,6 @@ public class AccessCheckTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void hibernateWith() {
         TestSecurityContext.authenticate(ADMIN, ADMIN);
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("with-clause");
@@ -153,7 +151,6 @@ public class AccessCheckTest {
     }
 
     @Test
-    @Ignore("TODO replace persistence provider")
     public void aliasRules() {
         TestSecurityContext.authenticate(USER);
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("alias");

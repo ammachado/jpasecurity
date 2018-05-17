@@ -64,7 +64,6 @@ public class EntityManagerEvaluatorTest {
     private static final String SELECT = "SELECT bean FROM MethodAccessTestBean bean ";
 
     private DefaultAccessManager accessManager;
-    private Metamodel metamodel;
     private JpqlParser parser;
     private JpqlCompiler compiler;
     private QueryEvaluationParameters parameters;
@@ -78,7 +77,7 @@ public class EntityManagerEvaluatorTest {
 
     @Before
     public void initialize() throws NoSuchMethodException, ParseException {
-        metamodel = mock(Metamodel.class);
+        Metamodel metamodel = mock(Metamodel.class);
         SecurePersistenceUnitUtil persistenceUnitUtil = mock(SecurePersistenceUnitUtil.class);
 
         EntityType methodAccessTestBeanType = mock(EntityType.class);
@@ -101,8 +100,8 @@ public class EntityManagerEvaluatorTest {
         when(metamodel.embeddable(ParentTestBean.class))
             .thenThrow(new IllegalArgumentException("embeddable not found"));
         when(methodAccessTestBeanType.getName()).thenReturn(MethodAccessTestBean.class.getSimpleName());
-        when(methodAccessTestBeanType.getJavaType()).thenReturn((Class)MethodAccessTestBean.class);
-        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet(Arrays.asList(
+        when(methodAccessTestBeanType.getJavaType()).thenReturn(MethodAccessTestBean.class);
+        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet<>(Arrays.asList(
                 idAttribute, nameAttribute, parentAttribute, childrenAttribute, relatedAttribute)));
         when(methodAccessTestBeanType.getAttribute("id")).thenReturn(idAttribute);
         when(methodAccessTestBeanType.getAttribute("name")).thenReturn(nameAttribute);
@@ -110,7 +109,7 @@ public class EntityManagerEvaluatorTest {
         when(methodAccessTestBeanType.getAttribute("children")).thenReturn(childrenAttribute);
         when(methodAccessTestBeanType.getAttribute("related")).thenReturn(relatedAttribute);
         when(childTestBeanType.getName()).thenReturn(ChildTestBean.class.getSimpleName());
-        when(childTestBeanType.getJavaType()).thenReturn((Class)ChildTestBean.class);
+        when(childTestBeanType.getJavaType()).thenReturn(ChildTestBean.class);
         when(idAttribute.getName()).thenReturn("id");
         when(idAttribute.isCollection()).thenReturn(false);
         when(idAttribute.getType()).thenReturn(intType);
@@ -211,7 +210,7 @@ public class EntityManagerEvaluatorTest {
     public void evaluateSubselectCanEvaluateIsAccessibleNoDbAccessHint() throws Exception {
         JpqlCompiledStatement jpqlCompiledStatement = getCompiledSubselect(
             SELECT
-                + "WHERE EXISTS " + "(SELECT /* IS_ACCESSIBLE_NODB */ innerBean "
+                + "WHERE EXISTS (SELECT /* IS_ACCESSIBLE_NODB */ innerBean "
                 + " FROM MethodAccessTestBean innerBean"
                 + " WHERE innerBean=bean)");
         JpqlSubselect subselect = (JpqlSubselect)jpqlCompiledStatement.getStatement();

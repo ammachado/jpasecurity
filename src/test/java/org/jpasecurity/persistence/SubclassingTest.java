@@ -30,14 +30,11 @@ import org.jpasecurity.model.TestBeanSubclass;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author Arne Limburg
  */
-//TODO
-@Ignore
 public class SubclassingTest {
 
     public static final String USER = "user";

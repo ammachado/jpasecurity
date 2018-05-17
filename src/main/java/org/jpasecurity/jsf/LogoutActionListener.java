@@ -64,7 +64,7 @@ public class LogoutActionListener implements ActionListener {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Logout failed.", e);
             } else {
-                LOG.info("Logout failed: " + e.getMessage());
+                LOG.info("Logout failed: {}", e.getMessage(), e);
             }
         }
     }

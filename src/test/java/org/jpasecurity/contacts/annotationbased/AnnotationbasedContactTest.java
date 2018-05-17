@@ -86,7 +86,6 @@ public class AnnotationbasedContactTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void findAllIsFiltered() {
         List<Contact> result = entityManager.createNamedQuery(Contact.FIND_ALL, Contact.class).getResultList();
         assertThat(result.size(), is(1));
@@ -109,7 +108,6 @@ public class AnnotationbasedContactTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void findAllWithCriteria() {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Contact> query = cb.createQuery(Contact.class);

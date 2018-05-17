@@ -17,6 +17,7 @@ package org.jpasecurity.persistence;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -31,12 +32,9 @@ import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /** @author Stefan Hildebrandt */
-//TODO not working with maven profiles
-@Ignore()
 public class ObjectIdentityTest {
 
     public static final String USER = "user";
@@ -123,8 +121,7 @@ public class ObjectIdentityTest {
     public void testIdentityFindByIdBeforeFindById() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity child
-            = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
+        ParentEntity child = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
         assertSame(child, entityManager.find(ParentEntity.class, PARENT_ENTITY_ID));
         entityManager.close();
     }
@@ -133,8 +130,7 @@ public class ObjectIdentityTest {
     public void testIdentityGetReferenceBeforeFindById() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity child
-            = entityManager.getReference(ParentEntity.class, PARENT_ENTITY_ID);
+        ParentEntity child = entityManager.getReference(ParentEntity.class, PARENT_ENTITY_ID);
         assertSame(child, entityManager.find(ParentEntity.class, PARENT_ENTITY_ID));
         entityManager.close();
     }
@@ -143,9 +139,8 @@ public class ObjectIdentityTest {
     public void testIdentityFindByIdAfterSingleResultQuery() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity parentEntity
-            = entityManager
-            .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
+        ParentEntity parentEntity = entityManager
+                .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
                 .getSingleResult();
         assertSame(parentEntity, entityManager.find(ParentEntity.class, PARENT_ENTITY_ID));
         entityManager.close();
@@ -155,9 +150,7 @@ public class ObjectIdentityTest {
     public void testIdentityFindByIdAfterRelationInitialisation() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity parentEntity
-            = entityManager
-            .find(ParentEntity.class, PARENT_ENTITY_ID);
+        ParentEntity parentEntity = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
         assertSame(parentEntity.getOneToOne(), entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ONE_TO_ONE));
         entityManager.close();
     }
@@ -166,8 +159,7 @@ public class ObjectIdentityTest {
     public void testIdentityFindByIdAfterLazyRelationInitialisation() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity parentEntity
-            = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
+        ParentEntity parentEntity = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
         final ChildEntityType1 oneToOneLazy = parentEntity.getOneToOneLazy();
         final ChildEntityType1 actual = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ONE_TO_ONE_LAZY);
         assertSame(oneToOneLazy, actual);
@@ -178,11 +170,9 @@ public class ObjectIdentityTest {
     public void testIdentityFindByIdAfterLazyAbstractRelationInitialisation() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity parentEntity
-            = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
+        ParentEntity parentEntity = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
         EntitySuperclass oneToOneLazy = parentEntity.getOneToOneAbstractLazy();
-        ChildEntityType1 actual =
-            entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ONE_TO_ONE_ABSTRACT_LAZY);
+        ChildEntityType1 actual = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ONE_TO_ONE_ABSTRACT_LAZY);
         assertEquals(oneToOneLazy.getId(), actual.getId());
         entityManager.close();
     }
@@ -191,20 +181,16 @@ public class ObjectIdentityTest {
     public void testIdentityFindByIdAfterCollectionInitialisation() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity parentEntity
-            = entityManager
-            .find(ParentEntity.class, PARENT_ENTITY_ID);
+        ParentEntity parentEntity = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
         final ChildEntityType1 child1 = parentEntity.getChildEntities().get(0);
         assertTrue(child1.getId() == CHILD_ENTITY_ID_MANY_TO_ONE_1
             || child1.getId() == CHILD_ENTITY_ID_MANY_TO_ONE_2);
-        assertSame(child1,
-            entityManager.find(ChildEntityType1.class, child1.getId()));
+        assertSame(child1, entityManager.find(ChildEntityType1.class, child1.getId()));
         final ChildEntityType1 child2 = parentEntity.getChildEntities().get(1);
         assertTrue(child2.getId() == CHILD_ENTITY_ID_MANY_TO_ONE_1
             || child2.getId() == CHILD_ENTITY_ID_MANY_TO_ONE_2);
-        assertFalse(child1.getId() == child2.getId());
-        assertSame(child2,
-            entityManager.find(ChildEntityType1.class, child2.getId()));
+        assertNotEquals(child1.getId(), child2.getId());
+        assertSame(child2, entityManager.find(ChildEntityType1.class, child2.getId()));
         entityManager.close();
     }
 
@@ -213,9 +199,7 @@ public class ObjectIdentityTest {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
         final ChildEntityType1 childEntity = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_MANY_TO_ONE_1);
-        ParentEntity parentEntity
-            = entityManager
-            .find(ParentEntity.class, PARENT_ENTITY_ID);
+        ParentEntity parentEntity = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
         boolean matchedEntry = false;
         for (ChildEntityType1 entity : parentEntity.getChildEntities()) {
             if (entity.getId() == childEntity.getId()) {
@@ -232,9 +216,8 @@ public class ObjectIdentityTest {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
         final ParentEntity byFindById = entityManager.find(ParentEntity.class, PARENT_ENTITY_ID);
-        ParentEntity byQuery
-            = entityManager
-            .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
+        ParentEntity byQuery = entityManager
+                .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
                 .getSingleResult();
         assertSame(byFindById, byQuery);
         entityManager.close();
@@ -245,9 +228,8 @@ public class ObjectIdentityTest {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
         final ChildEntityType1 byFindById = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_MANY_TO_ONE_1);
-        ParentEntity parent
-            = entityManager
-            .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
+        ParentEntity parent = entityManager
+                .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
                 .getSingleResult();
         boolean matchedEntry = false;
         for (ChildEntityType1 childEntity : parent.getChildEntities()) {
@@ -264,11 +246,10 @@ public class ObjectIdentityTest {
     public void testIdentityAbstractListQueryAfterFindById() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        final ChildEntityType1
-            byFindById = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ABSTRACT_MANY_TO_ONE_1);
-        ParentEntity parent
-            = entityManager
-            .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
+        final ChildEntityType1 byFindById
+                = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ABSTRACT_MANY_TO_ONE_1);
+        ParentEntity parent = entityManager
+                .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
                 .getSingleResult();
         boolean matchedEntry = false;
         for (EntitySuperclass childEntity : parent.getAbstractChildEntities()) {
@@ -285,9 +266,8 @@ public class ObjectIdentityTest {
     public void testIdentityAbstractListFindByIdAfterQuery() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity parent
-            = entityManager
-            .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
+        ParentEntity parent = entityManager
+                .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
                 .getSingleResult();
         final ChildEntityType1
             byFindById = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ABSTRACT_MANY_TO_ONE_1);
@@ -308,9 +288,8 @@ public class ObjectIdentityTest {
         EntityManager entityManager = factory.createEntityManager();
         final ChildEntityType1
             byFindById = entityManager.find(ChildEntityType1.class, CHILD_ENTITY_ID_ABSTRACT_LAZY_MANY_TO_ONE_1);
-        ParentEntity parent
-            = entityManager
-            .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
+        ParentEntity parent = entityManager
+                .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
                 .getSingleResult();
         boolean matchedEntry = false;
         for (EntitySuperclass childEntity : parent.getAbstractLazyChildEntities()) {
@@ -327,9 +306,8 @@ public class ObjectIdentityTest {
     public void testIdentityAbstractLazyListFindByIdAfterQuery() {
         TestSecurityContext.authenticate(USER);
         EntityManager entityManager = factory.createEntityManager();
-        ParentEntity parent
-            = entityManager
-            .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
+        ParentEntity parent = entityManager
+                .createQuery("SELECT bean FROM ParentEntity bean", ParentEntity.class)
                 .getSingleResult();
         final ChildEntityType1 byFindById = entityManager.find(ChildEntityType1.class,
             CHILD_ENTITY_ID_ABSTRACT_LAZY_MANY_TO_ONE_1);

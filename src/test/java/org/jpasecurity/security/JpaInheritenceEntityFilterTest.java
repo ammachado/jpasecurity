@@ -32,11 +32,13 @@ import javax.persistence.metamodel.Metamodel;
 import org.jpasecurity.AccessType;
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
+import org.jpasecurity.SecurityContext;
 import org.jpasecurity.access.DefaultAccessManager;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.jpql.parser.JpqlAccessRule;
 import org.jpasecurity.jpql.parser.JpqlParser;
 import org.jpasecurity.jpql.parser.Node;
+import org.jpasecurity.jpql.parser.ParseException;
 import org.jpasecurity.model.acl.AbstractAclProtectedEntity;
 import org.jpasecurity.model.acl.AbstractEntity;
 import org.jpasecurity.model.acl.AclProtectedEntity;
@@ -47,16 +49,27 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 
-/** @author Arne Limburg */
+/**
+ * @author Arne Limburg
+ */
 public class JpaInheritenceEntityFilterTest {
 
+    @Rule
+    private MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
+
+    @Mock
     private DefaultAccessManager accessManager;
     private EntityFilter filter;
 
     @Before
-    public void initialize() throws Exception {
+    public void initialize() throws ParseException {
         Metamodel metamodel = mock(Metamodel.class);
         MappedSuperclassType abstractAclProtectedEntityType = mock(MappedSuperclassType.class);
         EntityType aclProtectedEntityType = mock(EntityType.class);
@@ -64,9 +77,8 @@ public class JpaInheritenceEntityFilterTest {
         MappedSuperclassType abstractEntityType = mock(MappedSuperclassType.class);
         EntityType groupType = mock(EntityType.class);
         SecurePersistenceUnitUtil persistenceUnitUtil = mock(SecurePersistenceUnitUtil.class);
-        accessManager = mock(DefaultAccessManager.class);
         DefaultSecurityContext securityContext = new DefaultSecurityContext();
-        securityContext.register(new Alias("CURRENT_PRINCIPAL"), "user");
+        securityContext.register(SecurityContext.CURRENT_PRINCIPAL, "user");
         when(accessManager.getContext()).thenReturn(securityContext);
         when(metamodel.getManagedTypes()).thenReturn(new HashSet<>(Arrays.<ManagedType<?>>asList(
                 abstractAclProtectedEntityType, aclProtectedEntityType, secondAclProtectedEntityType,

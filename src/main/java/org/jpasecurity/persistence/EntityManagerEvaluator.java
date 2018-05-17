@@ -101,7 +101,7 @@ public class EntityManagerEvaluator extends AbstractSubselectEvaluator {
             }
         }
         String queryString = ((JpqlSubselect)statement.getStatement()).toJpqlString();
-        LOG.info("executing query : {}", queryString);
+        LOG.info("Executing query: {}", queryString);
         try {
             Query query = entityManager.createQuery(queryString);
             for (String namedParameter: statement.getNamedParameters()) {

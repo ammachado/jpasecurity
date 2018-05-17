@@ -81,7 +81,7 @@ public class JpqlCompiledStatement extends JpqlStatementHolder {
      * @see #getSelectedPaths()
      */
     public Map<Path, Class<?>> getSelectedTypes(Metamodel metamodel) {
-        Map<Path, Class<?>> selectedTypes = new HashMap<Path, Class<?>>();
+        Map<Path, Class<?>> selectedTypes = new HashMap<>();
         for (Path selectedPath: getSelectedPaths()) {
             selectedTypes.put(selectedPath,
                     TypeDefinition.Filter.managedTypeForPath(selectedPath)
@@ -103,6 +103,7 @@ public class JpqlCompiledStatement extends JpqlStatementHolder {
         return namedParameters;
     }
 
+    @Override
     public JpqlCompiledStatement clone() {
         return (JpqlCompiledStatement)super.clone();
     }

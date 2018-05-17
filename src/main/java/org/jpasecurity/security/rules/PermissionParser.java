@@ -33,7 +33,7 @@ public class PermissionParser extends AbstractAnnotationParser<PermitAny, ListMa
     private final PermitParser permitParser = new PermitParser();
 
     public ListMap<Class<?>, Permit> parsePermissions(Class<?>... classes) {
-        ListMap<Class<?>, Permit> permissions = new ListHashMap<Class<?>, Permit>();
+        ListMap<Class<?>, Permit> permissions = new ListHashMap<>();
         parse(classes, permissions);
         for (Map.Entry<Class<?>, Permit> annotation: permitParser.parsePermissions(classes).entrySet()) {
             permissions.add(annotation.getKey(), annotation.getValue());
@@ -41,6 +41,7 @@ public class PermissionParser extends AbstractAnnotationParser<PermitAny, ListMa
         return permissions;
     }
 
+    @Override
     protected void process(Class<?> annotatedClass, PermitAny permitAny, ListMap<Class<?>, Permit> permissions) {
         for (Permit permit: permitAny.value()) {
             permissions.add(annotatedClass, permit);

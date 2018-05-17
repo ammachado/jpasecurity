@@ -27,8 +27,7 @@ import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.model.MethodAccessAnnotationTestBean;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -36,8 +35,8 @@ import org.junit.Test;
  */
 public class ReplacementTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("grandparent-grandchild");
+    @ClassRule
+    public static final TestEntityManager entityManager = new TestEntityManager("grandparent-grandchild");
 
     private MethodAccessAnnotationTestBean grandparent;
 
@@ -61,7 +60,6 @@ public class ReplacementTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void canUpdateGrandchild() {
         TestSecurityContext.register(new Alias("CURRENT_GRANDPARENT"), grandparent);
 
@@ -77,7 +75,6 @@ public class ReplacementTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void cannotUpdateGrandparent() {
         TestSecurityContext.register(new Alias("CURRENT_GRANDPARENT"), grandparent);
 

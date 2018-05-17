@@ -32,6 +32,7 @@ public class SystemIdentity {
         return object;
     }
 
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof SystemIdentity)) {
             return false;
@@ -40,6 +41,7 @@ public class SystemIdentity {
         return this.object == systemMapKey.object;
     }
 
+    @Override
     public int hashCode() {
         return System.identityHashCode(object);
     }

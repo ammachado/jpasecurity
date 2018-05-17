@@ -29,11 +29,12 @@ import org.jpasecurity.util.AbstractAnnotationParser;
 public class DeclareRolesParser extends AbstractAnnotationParser<DeclareRoles, Set<String>> {
 
     public Set<String> parseDeclaredRoles(Collection<Class<?>> classes) {
-        Set<String> declaredRoles = new HashSet<String>();
+        Set<String> declaredRoles = new HashSet<>();
         parse(classes, declaredRoles);
         return declaredRoles;
     }
 
+    @Override
     protected void process(DeclareRoles annotation, Set<String> declaredRoles) {
         for (String role: annotation.value()) {
             declaredRoles.add(role);

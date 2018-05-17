@@ -20,6 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 
 import javax.persistence.PersistenceException;
@@ -53,7 +54,7 @@ public class JpqlCompilerTest {
 
     @Before
     public void initialize() throws NoSuchMethodException, ParseException {
-        metamodel = mock(Metamodel.class);
+        Metamodel metamodel = mock(Metamodel.class);
 
         EntityType methodAccessTestBeanType = mock(EntityType.class);
         BasicType intType = mock(BasicType.class);

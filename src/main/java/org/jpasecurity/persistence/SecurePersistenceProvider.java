@@ -41,10 +41,9 @@ public class SecurePersistenceProvider implements PersistenceProvider {
     private static final Logger LOG = LoggerFactory.getLogger(SecurePersistenceProvider.class.getName());
 
     static final String PERSISTENCE_PROVIDER_PROPERTY = "javax.persistence.provider";
-
-    private static final String NATIVE_PERSISTENCE_PROVIDER_PROPERTY = "org.jpasecurity.persistence.provider";
-    private static final String SECURITY_CONTEXT_PROPERTY = "org.jpasecurity.security.context";
-    private static final String ACCESS_RULES_PROVIDER_PROPERTY = "org.jpasecurity.security.rules.provider";
+    static final String NATIVE_PERSISTENCE_PROVIDER_PROPERTY = "org.jpasecurity.persistence.provider";
+    static final String SECURITY_CONTEXT_PROPERTY = "org.jpasecurity.security.context";
+    static final String ACCESS_RULES_PROVIDER_PROPERTY = "org.jpasecurity.security.rules.provider";
     private static final String DEFAULT_ORM_XML_LOCATION = "META-INF/orm.xml";
     private static final String DEFAULT_SECURITY_CONTEXT_PROPERTY
         = "org.jpasecurity.security.authentication.AutodetectingSecurityContext";

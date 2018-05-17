@@ -32,6 +32,7 @@ import javax.persistence.metamodel.SingularAttribute;
 
 import org.jpasecurity.AccessType;
 import org.jpasecurity.Alias;
+import org.jpasecurity.SecurityContext;
 import org.jpasecurity.access.DefaultAccessManager;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.contacts.model.Contact;
@@ -41,8 +42,13 @@ import org.jpasecurity.jpql.parser.JpqlParser;
 import org.jpasecurity.security.rules.AccessRulesCompiler;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 import org.mockito.stubbing.Answer;
 
 /**
@@ -50,21 +56,26 @@ import org.mockito.stubbing.Answer;
  */
 public class JpaEntityFilterTest {
 
+    @Rule
+    private MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
+
+    @Mock
     private Metamodel metamodel;
+
+    @Mock
     private DefaultAccessManager accessManager;
+
     private Collection<AccessRule> accessRules;
 
     @Before
     public void initialize() throws Exception {
-        metamodel = mock(Metamodel.class);
         EntityType contactType = mock(EntityType.class);
         SingularAttribute ownerAttribute = mock(SingularAttribute.class);
-        accessManager = mock(DefaultAccessManager.class);
         when(accessManager.getContext()).thenReturn(new DefaultSecurityContext());
         when(contactType.getName()).thenReturn(Contact.class.getSimpleName());
         when(contactType.getJavaType()).thenReturn((Class)Contact.class);
         when(metamodel.getEntities())
-            .thenReturn(new HashSet<EntityType<?>>(Arrays.<EntityType<?>>asList(contactType)));
+            .thenReturn(new HashSet<>(Collections.<EntityType<?>>singletonList(contactType)));
         when(metamodel.entity(Contact.class)).thenReturn(contactType);
         when(metamodel.managedType(Contact.class)).thenReturn(contactType);
         when(contactType.getAttributes()).thenReturn(Collections.singleton(ownerAttribute));
@@ -103,9 +114,9 @@ public class JpaEntityFilterTest {
         User john = new User("John");
         Contact contact = new Contact(john, "123456789");
 
-        securityContext.register(new Alias("CURRENT_PRINCIPAL"), john);
+        securityContext.register(SecurityContext.CURRENT_PRINCIPAL, john);
         assertTrue(filter.isAccessible(AccessType.READ, contact));
-        securityContext.register(new Alias("CURRENT_PRINCIPAL"), new User("Mary"));
+        securityContext.register(SecurityContext.CURRENT_PRINCIPAL, new User("Mary"));
         assertFalse(filter.isAccessible(AccessType.READ, contact));
     }
 }

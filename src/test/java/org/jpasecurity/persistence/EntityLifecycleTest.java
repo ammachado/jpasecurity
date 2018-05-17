@@ -30,13 +30,11 @@ import org.jpasecurity.model.acl.User;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author Arne Limburg
  */
-@Ignore
 public class EntityLifecycleTest {
 
     public static final String USER = "user";
@@ -333,7 +331,7 @@ public class EntityLifecycleTest {
 
         openEntityManager();
         final User user1 = entityManager.find(User.class, user.getId());
-        final ArrayList<Group> groupsReplacement = new ArrayList<Group>();
+        final ArrayList<Group> groupsReplacement = new ArrayList<>();
         user1.setGroups(groupsReplacement);
         final Group groupToAdd1 = entityManager.find(Group.class, group1.getId());
         final Group groupToAdd2 = entityManager.find(Group.class, group2.getId());

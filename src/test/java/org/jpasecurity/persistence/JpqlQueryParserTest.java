@@ -21,17 +21,15 @@ import javax.persistence.Persistence;
 
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author Arne Limburg
  * @author Johannes Siemer
  */
-@Ignore("Ignored until grammar is fixed")
 public class JpqlQueryParserTest {
 
-    public static final String USER1 = "user1";
+    private static final String USER1 = "user1";
 
     @Test
     public void count() {

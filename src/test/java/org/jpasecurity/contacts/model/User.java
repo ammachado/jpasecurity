@@ -63,10 +63,12 @@ public class User implements Serializable {
         this.name = name;
     }
 
+    @Override
     public String toString() {
         return getName();
     }
 
+    @Override
     public boolean equals(Object object) {
         if (this == object) {
             return true;
@@ -78,6 +80,7 @@ public class User implements Serializable {
         return getName().equals(user.getName());
     }
 
+    @Override
     public int hashCode() {
         return getName().hashCode();
     }

@@ -20,7 +20,6 @@ import javax.faces.context.FacesContext;
 
 import org.jpasecurity.AccessManager;
 import org.jpasecurity.AccessType;
-import org.jpasecurity.Alias;
 import org.jpasecurity.SecurityContext;
 import org.jpasecurity.jsf.authentication.JsfSecurityContext;
 
@@ -28,8 +27,6 @@ import org.jpasecurity.jsf.authentication.JsfSecurityContext;
  * @author Arne Limburg
  */
 public final class JsfAccessContext {
-
-    private static final Alias CURRENT_ROLES = new Alias("CURRENT_ROLES");
 
     public static SecureBeanDefinition newBean(String name) {
         return new SecureBeanDefinition(name);
@@ -125,7 +122,7 @@ public final class JsfAccessContext {
     }
 
     public static boolean isUserInRole(String roleName) {
-        return JsfAccessContext.getSecurityContext().getAliasValues(CURRENT_ROLES).contains(roleName);
+        return JsfAccessContext.getSecurityContext().getAliasValues(SecurityContext.CURRENT_ROLES).contains(roleName);
     }
 
     protected static AccessManager getAccessManager() {

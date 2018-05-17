@@ -28,14 +28,13 @@ import javax.persistence.criteria.Selection;
 import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 public class CriteriaBuilderTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("client");
+    @ClassRule
+    public static final TestEntityManager entityManager = new TestEntityManager("client");
 
     private static final String EMAIL = "test@test.org";
 
@@ -45,7 +44,6 @@ public class CriteriaBuilderTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void criteria() {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<ClientEntityBrowserDto> c = cb.createQuery(ClientEntityBrowserDto.class);
@@ -58,12 +56,12 @@ public class CriteriaBuilderTest {
 
         Selection<ClientEntityBrowserDto> selection
             = cb.construct(ClientEntityBrowserDto.class,
-                           client.<Integer>get("id"),
-                           client.<String>get("number"),
-                           client.<String>get("name"),
-                           clientTypeGroup.<String>get("name"),
-                           clientGroup.<String>get("name"),
-                           clientStructure.<String>get("name"));
+                           client.get(Client_.id),
+                           client.get(Client_.number),
+                           client.get(Client_.name),
+                           clientTypeGroup.get(ClientTypeGroup_.name),
+                           clientGroup.get(ClientGroup_.name),
+                           clientStructure.get(ClientStructure_.name));
 
         c.select(selection);
         c.distinct(true);

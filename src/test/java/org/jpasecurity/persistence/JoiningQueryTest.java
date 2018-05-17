@@ -27,13 +27,11 @@ import org.jpasecurity.model.UnprotectedJoinedEntity;
 import org.jpasecurity.model.UnprotectedJoiningEntity;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author Stefan Hildebrandt
  */
-@Ignore("Ignored until grammar is fixed")
 public class JoiningQueryTest {
 
     public static final String USER = "user";

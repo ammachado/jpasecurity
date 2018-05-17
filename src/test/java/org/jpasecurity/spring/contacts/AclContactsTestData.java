@@ -62,14 +62,18 @@ public class AclContactsTestData extends ContactsTestData {
         this.transactionManager = transactionManager;
     }
 
+    @Override
     public void createTestData(final EntityManagerFactory entityManagerFactory) {
         new TransactionTemplate(transactionManager).execute(new TransactionCallbackWithoutResult() {
+
+            @Override
             protected void doInTransactionWithoutResult(TransactionStatus status) {
                 AclContactsTestData.super.createTestData(entityManagerFactory);
             }
         });
     }
 
+    @Override
     protected User createUser(EntityManager entityManager, String name) {
         authenticate(name);
         User user = super.createUser(entityManager, name);
@@ -85,6 +89,7 @@ public class AclContactsTestData extends ContactsTestData {
         return user;
     }
 
+    @Override
     protected Contact createContact(EntityManager entityManager, User owner, String text) {
         authenticate(owner.getName());
         Contact contact = super.createContact(entityManager, owner, text);

@@ -24,10 +24,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,8 +31,6 @@ import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
-import org.xml.sax.SAXNotRecognizedException;
-import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
@@ -73,25 +67,9 @@ public class AbstractXmlParserTest {
         parser.parse(new URL("file:./non-existing-file.xml"));
     }
 
-    public static class TextSAXParserFactory extends SAXParserFactory {
-
-        public SAXParser newSAXParser() throws ParserConfigurationException, SAXException {
-            throw new ParserConfigurationException();
-        }
-
-        public void setFeature(String name, boolean value) throws ParserConfigurationException,
-                        SAXNotRecognizedException, SAXNotSupportedException {
-        }
-
-        public boolean getFeature(String name) throws ParserConfigurationException, SAXNotRecognizedException,
-                        SAXNotSupportedException {
-            return false;
-        }
-    }
-
     public static class TestXmlParser extends AbstractXmlParser<DelegatingXmlHandler> {
 
-        public TestXmlParser(DelegatingXmlHandler xmlHandler) {
+        TestXmlParser(DelegatingXmlHandler xmlHandler) {
             super(xmlHandler);
         }
     }
@@ -100,65 +78,67 @@ public class AbstractXmlParserTest {
 
         private ContentHandler delegate;
 
-        public DelegatingXmlHandler(ContentHandler contentHandler) {
+        DelegatingXmlHandler(ContentHandler contentHandler) {
             this.delegate = contentHandler;
         }
 
-        public ContentHandler getContentHandler() {
+        ContentHandler getContentHandler() {
             return delegate;
         }
 
+        @Override
         public void setDocumentLocator(Locator locator) {
             delegate.setDocumentLocator(locator);
         }
 
+        @Override
         public void startDocument() throws SAXException {
             delegate.startDocument();
         }
 
+        @Override
         public void endDocument() throws SAXException {
             delegate.endDocument();
         }
 
+        @Override
         public void startPrefixMapping(String prefix, String uri) throws SAXException {
             delegate.startPrefixMapping(prefix, uri);
         }
 
+        @Override
         public void endPrefixMapping(String prefix) throws SAXException {
             delegate.endPrefixMapping(prefix);
         }
 
+        @Override
         public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException {
             delegate.startElement(uri, localName, qName, atts);
         }
 
+        @Override
         public void endElement(String uri, String localName, String qName) throws SAXException {
             delegate.endElement(uri, localName, qName);
         }
 
+        @Override
         public void characters(char[] ch, int start, int length) throws SAXException {
             delegate.characters(ch, start, length);
         }
 
+        @Override
         public void ignorableWhitespace(char[] ch, int start, int length) throws SAXException {
             delegate.ignorableWhitespace(ch, start, length);
         }
 
+        @Override
         public void processingInstruction(String target, String data) throws SAXException {
             delegate.processingInstruction(target, data);
         }
 
+        @Override
         public void skippedEntity(String name) throws SAXException {
             delegate.skippedEntity(name);
         }
-    }
-
-    private static class IORuntimeException extends RuntimeException {
-    }
-
-    private static class SaxRuntimeException extends RuntimeException {
-    }
-
-    private static class ParserConfigurationRuntimeException extends RuntimeException {
     }
 }

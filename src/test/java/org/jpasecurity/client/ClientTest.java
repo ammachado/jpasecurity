@@ -34,15 +34,15 @@ import org.jpasecurity.model.client.ProcessInstanceProcessTaskInstance;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 
 /** @author Arne Limburg */
 public class ClientTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("client");
+    @ClassRule
+    public static final TestEntityManager entityManager = new TestEntityManager("client");
 
     private static final String EMAIL = "test@test.org";
 
@@ -116,7 +116,6 @@ public class ClientTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void access() {
         TestSecurityContext.authenticate(EMAIL);
         Client client = entityManager.find(Client.class, clientId);
@@ -129,14 +128,12 @@ public class ClientTest {
         assertNotNull(entityManager.find(Client.class, clientId));
     }
 
-    @Ignore("Ignored until grammar is fixed")
     @Test(expected = SecurityException.class)
     public void wrongEmail() {
         TestSecurityContext.authenticate("wrong@email.org");
         assertNotNull(entityManager.find(Client.class, clientId));
     }
 
-    @Ignore("Ignored until grammar is fixed")
     @Test(expected = SecurityException.class)
     public void wrongStatus() {
         TestSecurityContext.authenticate(EMAIL);
@@ -171,18 +168,16 @@ public class ClientTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void query() {
         TestSecurityContext.authenticate(EMAIL);
-        List<Client> clients = entityManager.createQuery("SELECT cl FROM Client cl WHERE cl.id = :id",
-            Client.class)
-            .setParameter("id", clientId)
-            .getResultList();
+        List<Client> clients = entityManager
+                .createQuery("SELECT cl FROM Client cl WHERE cl.id = :id", Client.class)
+                .setParameter("id", clientId)
+                .getResultList();
         assertEquals(1, clients.size());
     }
 
     @Test
-    @Ignore
     public void queryOperationsTracking() {
         TestSecurityContext.authenticate(EMAIL);
         List<ClientOperationsTracking> tracking = entityManager
@@ -194,18 +189,16 @@ public class ClientTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void testProcessInstance() {
         TestSecurityContext.authenticate(EMAIL);
         assertEquals(clientId, clientTaskPersisted.getClient().getId().intValue());
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void testIdAndNameDtoGetSingleResult() {
         TestSecurityContext.authenticate(EMAIL);
         List<IdAndNameDto> idAndNameDtoList = entityManager
-            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME).getResultList();
+            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getResultList();
         assertEquals(1, idAndNameDtoList.size());
         assertEquals(IdAndNameDto.class, idAndNameDtoList.get(0).getClass());
         assertEquals(clientId, idAndNameDtoList.get(0).getId().intValue());
@@ -216,11 +209,10 @@ public class ClientTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void testIdAndNameDtoGetResultList() {
         TestSecurityContext.authenticate(EMAIL);
         List<IdAndNameDto> idAndNameDtoList = entityManager
-            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME).getResultList();
+            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getResultList();
         assertEquals(1, idAndNameDtoList.size());
         assertEquals(IdAndNameDto.class, idAndNameDtoList.get(0).getClass());
         assertEquals(clientId, idAndNameDtoList.get(0).getId().intValue());

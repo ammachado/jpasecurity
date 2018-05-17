@@ -25,7 +25,7 @@ import org.jpasecurity.model.FieldAccessAnnotationTestBean;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -35,8 +35,8 @@ public class EntityManagerFirstLevelCacheTest {
 
     public static final String USER = "user";
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("entity-lifecycle-test");
+    @ClassRule
+    public static final TestEntityManager entityManager = new TestEntityManager("entity-lifecycle-test");
 
     @Before
     public void createTestData() {

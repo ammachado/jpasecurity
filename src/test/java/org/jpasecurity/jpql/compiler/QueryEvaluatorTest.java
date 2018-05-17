@@ -54,7 +54,6 @@ import org.jpasecurity.model.MethodAccessTestBean;
 import org.jpasecurity.model.ParentTestBean;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class QueryEvaluatorTest {
@@ -100,7 +99,7 @@ public class QueryEvaluatorTest {
         when(metamodel.embeddable(ParentTestBean.class))
             .thenThrow(new IllegalArgumentException("embeddable not found"));
         when(methodAccessTestBeanType.getName()).thenReturn(MethodAccessTestBean.class.getSimpleName());
-        when(methodAccessTestBeanType.getJavaType()).thenReturn((Class)MethodAccessTestBean.class);
+        when(methodAccessTestBeanType.getJavaType()).thenReturn(MethodAccessTestBean.class);
         when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet<>(Arrays.asList(
                 idAttribute, nameAttribute, parentAttribute, childrenAttribute, relatedAttribute)));
         when(methodAccessTestBeanType.getAttribute("id")).thenReturn(idAttribute);
@@ -109,7 +108,7 @@ public class QueryEvaluatorTest {
         when(methodAccessTestBeanType.getAttribute("children")).thenReturn(childrenAttribute);
         when(methodAccessTestBeanType.getAttribute("related")).thenReturn(relatedAttribute);
         when(childTestBeanType.getName()).thenReturn(ChildTestBean.class.getSimpleName());
-        when(childTestBeanType.getJavaType()).thenReturn((Class)ChildTestBean.class);
+        when(childTestBeanType.getJavaType()).thenReturn(ChildTestBean.class);
         when(idAttribute.getName()).thenReturn("id");
         when(idAttribute.isCollection()).thenReturn(false);
         when(idAttribute.getType()).thenReturn(intType);
@@ -155,9 +154,9 @@ public class QueryEvaluatorTest {
 
     @Test
     public void canEvaluate() throws Exception {
-        JpqlCompiledStatement statement = compile("SELECT bean " + "FROM MethodAccessTestBean bean "
-                                                  + "WHERE bean.name = :name " + "GROUP BY bean.parent "
-                                                  + "HAVING COUNT(bean.parent) > 1 " + "ORDER BY bean.parent.id");
+        JpqlCompiledStatement statement = compile("SELECT bean FROM MethodAccessTestBean bean "
+                                                  + "WHERE bean.name = :name GROUP BY bean.parent "
+                                                  + "HAVING COUNT(bean.parent) > 1 ORDER BY bean.parent.id");
         JpqlSelect selectStatement = (JpqlSelect)statement.getStatement().jjtGetChild(0);
         JpqlSelectClause selectClause = (JpqlSelectClause)selectStatement.jjtGetChild(SELECT_CLAUSE_INDEX);
         JpqlFrom fromClause = (JpqlFrom)selectStatement.jjtGetChild(FROM_CLAUSE_INDEX);
@@ -225,7 +224,7 @@ public class QueryEvaluatorTest {
 
     @Test
     public void canEvaluateCount() throws Exception {
-        JpqlCompiledStatement statement = compile("SELECT COUNT(bean) " + "FROM MethodAccessTestBean bean "
+        JpqlCompiledStatement statement = compile("SELECT COUNT(bean) FROM MethodAccessTestBean bean "
                                                   + "WHERE bean.name = :name ");
         JpqlSelect selectStatement = (JpqlSelect)statement.getStatement().jjtGetChild(0);
         JpqlSelectClause selectClause = (JpqlSelectClause)selectStatement.jjtGetChild(0);
@@ -283,7 +282,7 @@ public class QueryEvaluatorTest {
 
     @Test
     public void evaluateSubselect() throws Exception {
-        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean.name IN " + "(SELECT innerBean "
+        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean.name IN (SELECT innerBean "
                                                   + " FROM MethodAccessTestBean innerBean)");
         aliases.put(new Alias("bean"), new MethodAccessTestBean("test"));
         try {
@@ -296,7 +295,7 @@ public class QueryEvaluatorTest {
 
     @Test
     public void evaluateSimpleCase() throws Exception {
-        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = " + "CASE bean.name WHEN :name THEN bean "
+        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = CASE bean.name WHEN :name THEN bean "
                                                   + "WHEN :name2 THEN bean ELSE NULL END");
         MethodAccessTestBean bean = new MethodAccessTestBean("test1");
         aliases.put(new Alias("bean"), bean);
@@ -360,7 +359,6 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void evaluateKey() throws Exception {
         JpqlCompiledStatement statement
             = compile(SELECT + "LEFT OUTER JOIN bean.related r WHERE KEY(r).name = :beanName AND bean = b");
@@ -391,7 +389,6 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void evaluateValue() throws Exception {
         JpqlCompiledStatement statement
             = compile(SELECT + "LEFT OUTER JOIN bean.related r WHERE VALUE(r).name = :beanName AND bean = b");
@@ -422,7 +419,6 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void evaluateEntry() throws Exception {
         JpqlCompiledStatement notNullStatement
             = compile(SELECT + "INNER JOIN bean.related related WHERE ENTRY(related) IS NOT NULL AND bean = b");
@@ -487,7 +483,7 @@ public class QueryEvaluatorTest {
 
     @Test
     public void evaluateCase() throws Exception {
-        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = " + "CASE WHEN bean.name = :name THEN bean "
+        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = CASE WHEN bean.name = :name THEN bean "
                                                   + "WHEN bean.id = ?1 THEN bean ELSE NULL END");
         MethodAccessTestBean bean = new MethodAccessTestBean("test1");
         aliases.put(new Alias("bean"), bean);
@@ -549,7 +545,6 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void evaluateCoalesce() throws Exception {
         JpqlCompiledStatement statement
             = compile(SELECT
@@ -970,7 +965,6 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void evaluateArithmeticFunctions() throws Exception {
         assertTrue(evaluate(SELECT + "WHERE 1 + 1 < 3", parameters));
         assertTrue(evaluate(SELECT + "WHERE 10 / 3 >= 3.3", parameters));
@@ -986,7 +980,6 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void evaluateStringFunctions() throws Exception {
         assertTrue(evaluate(SELECT + "WHERE TRIM(' test ') = 'test'", parameters));
         assertTrue(evaluate(SELECT + "WHERE TRIM(BOTH '_' FROM '_test__') = 'test'", parameters));

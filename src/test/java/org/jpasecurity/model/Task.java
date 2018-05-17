@@ -21,6 +21,7 @@ import static org.jpasecurity.AccessType.READ;
 import static org.jpasecurity.AccessType.UPDATE;
 import static org.jpasecurity.util.Validate.notNull;
 
+import java.util.Objects;
 import javax.persistence.Entity;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
@@ -78,6 +79,6 @@ public class Task {
             return false;
         }
         Task task = (Task)object;
-        return id == task.id;
+        return Objects.equals(id, task.id);
     }
 }

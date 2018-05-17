@@ -26,6 +26,21 @@ import java.util.Collection;
 public interface SecurityContext {
 
     /**
+     * The current roles alias, <tt>CURRENT_ROLES</tt>, containing a collection of <tt>String</tt> values.
+     */
+    Alias CURRENT_ROLES = new Alias("CURRENT_ROLES");
+
+    /**
+     * The current principal alias, <tt>CURRENT_PRINCIPAL</tt>, containing a <tt>String</tt> value.
+     */
+    Alias CURRENT_PRINCIPAL = new Alias("CURRENT_PRINCIPAL");
+
+    /**
+     * The current tenant alias, <tt>CURRENT_TENANT</tt>, containing a <tt>String</tt> value.
+     */
+    Alias CURRENT_TENANT = new Alias("CURRENT_TENANT");
+
+    /**
      * Returns a collection of all aliases that may be used in access rules,
      * i.e. <tt>CURRENT_PRINCIPAL</tt>, <tt>CURRENT_ROLES</tt> or <tt>CURRENT_TENANT</tt>.
      *
@@ -51,7 +66,7 @@ public interface SecurityContext {
      * if an alias is collection-valued, that means if the value of an alias
      * is a collection (i.e. <tt>CURRENT_ROLES</tt>) or not.
      * Only in the case that the alias is collection-valued,
-     * this method will be called, * otherwise {@link #getAliasValue(Alias)}
+     * this method will be called, otherwise {@link #getAliasValue(Alias)}
      * will be called.
      *
      * @param <T> the value type.

@@ -19,9 +19,9 @@ package org.jpasecurity;
  * A class that represents an alias in an access rule or query
  * @author Arne Limburg
  */
-public class Alias {
+public final class Alias {
 
-    private String name;
+    private final String name;
 
     public static Alias alias(String name) {
         return new Alias(name);

@@ -21,7 +21,6 @@ import java.util.Set;
 import org.jpasecurity.security.rules.WebXmlRolesParser.XmlRolesHandler;
 import org.jpasecurity.xml.AbstractXmlParser;
 import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
@@ -43,23 +42,26 @@ public class WebXmlRolesParser extends AbstractXmlParser<XmlRolesHandler> {
         private static final String ROLE_NAME_TAG = "role-name";
 
         private StringBuilder currentText = new StringBuilder();
-        private Set<String> roles = new HashSet<String>();
+        private Set<String> roles = new HashSet<>();
 
         public Set<String> getRoles() {
             return roles;
         }
 
-        public void startElement(String uri, String tag, String qualified, Attributes attributes) throws SAXException {
+        @Override
+        public void startElement(String uri, String tag, String qualified, Attributes attributes) {
             if (ROLE_NAME_TAG.equals(qualified)) {
                 currentText.setLength(0);
             }
         }
 
-        public void characters(char[] chars, int start, int length) throws SAXException {
+        @Override
+        public void characters(char[] chars, int start, int length) {
             currentText.append(chars, start, length);
         }
 
-        public void endElement(String uri, String localName, String qualifiedName) throws SAXException {
+        @Override
+        public void endElement(String uri, String localName, String qualifiedName) {
             String text = currentText.toString().trim();
             currentText.setLength(0);
             if (ROLE_NAME_TAG.equals(qualifiedName)) {

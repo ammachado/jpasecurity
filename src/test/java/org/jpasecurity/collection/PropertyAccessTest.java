@@ -36,7 +36,7 @@ import org.jpasecurity.model.SimpleEmbeddable;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.jpasecurity.util.ReflectionUtils;
 import org.junit.After;
-import org.junit.Ignore;
+import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.util.CollectionUtils;
 
@@ -45,12 +45,11 @@ import org.springframework.util.CollectionUtils;
  */
 public class PropertyAccessTest {
 
-    public static final String USER1 = "user1";
-    public static final String USER2 = "user2";
+    private static final String USER1 = "user1";
+    private static final String USER2 = "user2";
     private static final String ADMIN = "admin";
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void queryWithEmbeddedResult() {
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("annotation-based-field-access");
         EntityManager entityManager = factory.createEntityManager();
@@ -82,7 +81,6 @@ public class PropertyAccessTest {
         factory.close();
     }
 
-    @Ignore
     @Test
     public void navigateOneToMany() {
         TestSecurityContext.authenticate(ADMIN, ADMIN);
@@ -108,7 +106,6 @@ public class PropertyAccessTest {
         factory.close();
     }
 
-    @Ignore
     @Test
     public void methodBasedMapping() {
         TestSecurityContext.authenticate(ADMIN, ADMIN);
@@ -126,13 +123,12 @@ public class PropertyAccessTest {
         final MethodAccessAnnotationTestBean bean2
             = entityManager2.find(MethodAccessAnnotationTestBean.class, bean.getId());
         for (MethodAccessAnnotationTestBean methodAccessAnnotationTestBean: bean2.getChildren()) {
-            methodAccessAnnotationTestBean.getId();
+            Assert.assertNotEquals(0, methodAccessAnnotationTestBean.getId());
         }
         entityManager2.getTransaction().commit();
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void oneToManyMapping() {
         TestSecurityContext.authenticate(ADMIN, ADMIN);
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("parent-child");
@@ -156,7 +152,6 @@ public class PropertyAccessTest {
     }
 
     @Test
-    @Ignore("Ignored until grammar is fixed")
     public void identityMapping() {
         TestSecurityContext.authenticate(ADMIN, ADMIN);
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("parent-child");
@@ -187,7 +182,6 @@ public class PropertyAccessTest {
         entityManager3.close();
     }
 
-    @Ignore
     @Test
     public void update() {
         TestSecurityContext.authenticate(USER1);
@@ -243,7 +237,6 @@ public class PropertyAccessTest {
         assertEquals(USER2, bean.getBeanName());
     }
 
-    @Ignore
     @Test
     public void fieldBasedPropertyAccessCount() {
         TestSecurityContext.authenticate(USER1);
@@ -276,7 +269,6 @@ public class PropertyAccessTest {
         entityManager.close();
     }
 
-    @Ignore
     @Test
     public void methodBasedPropertyAccessCount() {
         TestSecurityContext.authenticate(USER1);

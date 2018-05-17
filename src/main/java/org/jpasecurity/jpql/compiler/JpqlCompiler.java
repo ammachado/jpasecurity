@@ -36,6 +36,7 @@ import org.jpasecurity.jpql.TypeDefinition;
 import org.jpasecurity.jpql.parser.JpqlCase;
 import org.jpasecurity.jpql.parser.JpqlClassName;
 import org.jpasecurity.jpql.parser.JpqlCoalesce;
+import org.jpasecurity.jpql.parser.JpqlCollectionValuedPath;
 import org.jpasecurity.jpql.parser.JpqlConstructorParameter;
 import org.jpasecurity.jpql.parser.JpqlCount;
 import org.jpasecurity.jpql.parser.JpqlEntry;
@@ -242,7 +243,7 @@ public class JpqlCompiler {
                 Node conditionNode = queryPreparator.createIsNotNull(childNode.clone());
                 conditionalPaths.add(new ConditionalPath(childNode.toString(), conditionNode));
             }
-            for (ConditionalPath path: (List<ConditionalPath>)conditionalPaths) {
+            for (ConditionalPath path: conditionalPaths) {
                 if (condition == null) {
                     selectedPaths.add(path);
                     condition = queryPreparator.createNot(queryPreparator.createBrackets(path.getCondition()));
@@ -382,11 +383,31 @@ public class JpqlCompiler {
                                   Set<TypeDefinition> typeDefinitions,
                                   boolean innerJoin,
                                   boolean fetchJoin) {
-            Path fetchPath = new Path(node.jjtGetChild(0).toString());
+            Node pathNode = null;
+            if (node instanceof JpqlPath || node instanceof JpqlCollectionValuedPath) {
+                pathNode = node;
+            } else {
+                for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+                    if (node.jjtGetChild(i) instanceof JpqlPath
+                            || node.jjtGetChild(i) instanceof JpqlCollectionValuedPath) {
+                        pathNode = node;
+                        break;
+                    }
+                }
+            }
+            if (pathNode == null) {
+                throw new PersistenceException("Alias not found.");
+            }
+            Path fetchPath = new Path(pathNode.jjtGetChild(1).toString());
             Class<?> keyType = null;
-            Attribute<?, ?> attribute = TypeDefinition.Filter.attributeForPath(fetchPath)
+            Attribute<?, ?> attribute = TypeDefinition.Filter
+                    .attributeForPath(fetchPath)
                     .withMetamodel(metamodel)
                     .filter(typeDefinitions);
+            //Attribute<?, ?> attribute = TypeDefinition.Filter
+            //        .attributeForPath(new Path(node.jjtGetChild(1).toString()))
+            //        .withMetamodel(metamodel)
+            //        .filter(typeDefinitions);
             Class<?> type;
             if (attribute instanceof MapAttribute) {
                 MapAttribute<?, ?, ?> mapAttribute = (MapAttribute<?, ?, ?>)attribute;
@@ -404,7 +425,7 @@ public class JpqlCompiler {
             if (node.jjtGetNumChildren() == 1) {
                 typeDefinitions.add(new TypeDefinition(type, fetchPath, innerJoin, fetchJoin));
             } else {
-                Alias alias = getAlias(node);
+                Alias alias = getAlias(pathNode.jjtGetChild(1));
                 typeDefinitions.add(new TypeDefinition(alias, type, fetchPath, innerJoin, fetchJoin));
             }
             return false;
@@ -419,7 +440,7 @@ public class JpqlCompiler {
             if (node.jjtGetNumChildren() < 2) {
                 throw new PersistenceException("Missing alias for type " + node.jjtGetChild(0).toString());
             }
-            return new Alias(node.jjtGetChild(1).toString());
+            return new Alias(node.jjtGetChild(node.jjtGetNumChildren() - 1).toString());
         }
 
         private void determinePreliminaryTypes(Set<TypeDefinition> typeDefinitions) {

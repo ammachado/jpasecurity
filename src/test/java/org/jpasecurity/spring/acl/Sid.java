@@ -38,6 +38,7 @@ public class Sid {
     @Id
     @GeneratedValue
     private long id;
+
     @Column(name = "sid")
     private String name;
 

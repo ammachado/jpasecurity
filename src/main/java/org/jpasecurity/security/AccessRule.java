@@ -155,7 +155,7 @@ public class AccessRule extends JpqlCompiledStatement {
         return access;
     }
 
-    private class AccessVisitor extends JpqlVisitorAdapter<Collection<AccessType>> {
+    private static class AccessVisitor extends JpqlVisitorAdapter<Collection<AccessType>> {
 
         @Override
         public boolean visit(JpqlCreate node, Collection<AccessType> access) {
