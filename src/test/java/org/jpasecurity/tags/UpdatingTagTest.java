@@ -22,10 +22,12 @@ import org.jpasecurity.AccessType;
  */
 public class UpdatingTagTest extends AbstractEntityTagTestCase {
 
+    @Override
     public AbstractEntityTag createEntityTag() {
         return new UpdatingTag();
     }
 
+    @Override
     public AccessType getAccessType() {
         return AccessType.UPDATE;
     }

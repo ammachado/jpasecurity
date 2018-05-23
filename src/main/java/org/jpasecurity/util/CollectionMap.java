@@ -48,6 +48,7 @@ public interface CollectionMap<K, C extends Collection<V>, V> extends Map<K, C> 
      * to the collections of their keys.
      * @param map the map with the collections that contain the elements to add
      */
+    @Override
     void putAll(Map<? extends K, ? extends C> map);
 
     /**

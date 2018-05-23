@@ -36,34 +36,41 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
         super(original, filtered);
     }
 
+    @Override
     protected SortedSet<E> createFiltered() {
         if (getOriginal().comparator() == null) {
-            return new TreeSet<E>();
+            return new TreeSet<>();
         } else {
-            return new TreeSet<E>(getOriginal().comparator());
+            return new TreeSet<>(getOriginal().comparator());
         }
     }
 
+    @Override
     public Comparator<? super E> comparator() {
         return getFiltered().comparator();
     }
 
+    @Override
     public E first() {
         return getFiltered().first();
     }
 
+    @Override
     public E last() {
         return getFiltered().last();
     }
 
+    @Override
     public SortedSet<E> headSet(E toElement) {
         return new SecureSubSet(first(), toElement);
     }
 
+    @Override
     public SortedSet<E> subSet(E fromElement, E toElement) {
         return new SecureSubSet(fromElement, toElement);
     }
 
+    @Override
     public SortedSet<E> tailSet(E fromElement) {
         return new SecureSubSet(fromElement, last(), true);
     }
@@ -101,11 +108,13 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
             }
         }
 
+        @Override
         public boolean add(E entry) {
             checkRange(entry);
             return SecureSortedSet.this.add(entry);
         }
 
+        @Override
         public boolean addAll(Collection<? extends E> collection) {
             for (E entry: collection) {
                 checkRange(entry);
@@ -113,11 +122,13 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
             return SecureSortedSet.this.addAll(collection);
         }
 
+        @Override
         public boolean remove(Object entry) {
             checkRange((E)entry);
             return SecureSortedSet.this.remove(entry);
         }
 
+        @Override
         public boolean removeAll(Collection<?> collection) {
             for (E entry: (Collection<E>)collection) {
                 checkRange(entry);
@@ -125,6 +136,7 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
             return SecureSortedSet.this.removeAll(collection);
         }
 
+        @Override
         public boolean retainAll(final Collection<?> collection) {
             for (E entry: (Collection<E>)collection) {
                 checkRange(entry);
@@ -132,6 +144,7 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
             return SecureSortedSet.this.retainAll(collection);
         }
 
+        @Override
         public void clear() {
             for (Iterator<E> i = iterator(); i.hasNext();) {
                 i.next();
@@ -139,6 +152,7 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
             }
         }
 
+        @Override
         public int size() {
             if (tailSet) {
                 return getFiltered().tailSet(from).size();
@@ -147,14 +161,17 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
             }
         }
 
+        @Override
         public Comparator<? super E> comparator() {
             return SecureSortedSet.this.comparator();
         }
 
+        @Override
         public E first() {
             return getFiltered().subSet(from, to).first();
         }
 
+        @Override
         public E last() {
             if (tailSet) {
                 return getFiltered().tailSet(from).last();
@@ -163,17 +180,20 @@ public class SecureSortedSet<E> extends AbstractSecureCollection<E, SortedSet<E>
             }
         }
 
+        @Override
         public SortedSet<E> headSet(E to) {
             checkRange(to);
             return new SecureSubSet(from, to);
         }
 
+        @Override
         public SortedSet<E> subSet(E from, E to) {
             checkRange(from);
             checkRange(to);
             return new SecureSubSet(from, to);
         }
 
+        @Override
         public SortedSet<E> tailSet(E from) {
             checkRange(from);
             return new SecureSubSet(from, to, true);

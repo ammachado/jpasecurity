@@ -49,20 +49,21 @@ public class ValueIterator implements Iterator<Map<Alias, Object>> {
                          Set<TypeDefinition> typeDefinitions,
                          PathEvaluator pathEvaluator) {
         this.pathEvaluator = pathEvaluator;
-        this.possibleValues = new ListHashMap<Alias, Object>();
-        this.dependentTypeDefinitions = new ListHashMap<Alias, TypeDefinition>();
-        this.currentValues = new HashMap<Alias, Object>();
-        this.currentPossibleDependentValues = new ListHashMap<Alias, Object>();
+        this.possibleValues = new ListHashMap<>();
+        this.dependentTypeDefinitions = new ListHashMap<>();
+        this.currentValues = new HashMap<>();
+        this.currentPossibleDependentValues = new ListHashMap<>();
         for (TypeDefinition typeDefinition: getJoinAliasDefinitions(typeDefinitions)) {
             possibleValues.remove(typeDefinition.getAlias());
             this.dependentTypeDefinitions.add(typeDefinition.getJoinPath().getRootAlias(), typeDefinition);
         }
         for (Map.Entry<Alias, Set<Object>> possibleValueEntry: possibleValues.entrySet()) {
-            this.possibleValues.put(possibleValueEntry.getKey(), new ArrayList<Object>(possibleValueEntry.getValue()));
+            this.possibleValues.put(possibleValueEntry.getKey(), new ArrayList<>(possibleValueEntry.getValue()));
         }
-        this.possibleAliases = new ArrayList<Alias>(possibleValues.keySet());
+        this.possibleAliases = new ArrayList<>(possibleValues.keySet());
     }
 
+    @Override
     public boolean hasNext() {
         if (!initialized) {
             return hasFirst();
@@ -78,12 +79,13 @@ public class ValueIterator implements Iterator<Map<Alias, Object>> {
         return false;
     }
 
+    @Override
     public Map<Alias, Object> next() {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
         if (!initialized) {
-            return new HashMap<Alias, Object>(first());
+            return new HashMap<>(first());
         }
         for (Alias alias: possibleAliases) {
             if (hasNextDependentValue(alias)) {
@@ -98,6 +100,7 @@ public class ValueIterator implements Iterator<Map<Alias, Object>> {
         throw new NoSuchElementException();
     }
 
+    @Override
     public void remove() {
         throw new UnsupportedOperationException();
     }
@@ -290,7 +293,7 @@ public class ValueIterator implements Iterator<Map<Alias, Object>> {
     }
 
     private Set<TypeDefinition> getJoinAliasDefinitions(Set<TypeDefinition> typeDefinitions) {
-        Set<TypeDefinition> joinTypeDefinitions = new HashSet<TypeDefinition>();
+        Set<TypeDefinition> joinTypeDefinitions = new HashSet<>();
         for (TypeDefinition typeDefinition: typeDefinitions) {
             if (typeDefinition.isJoin()) {
                 joinTypeDefinitions.add(typeDefinition);

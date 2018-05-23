@@ -106,7 +106,7 @@ public class JpqlStatementHolder implements Cloneable {
         statement.visit(visitor, data);
     }
 
-    private class FromVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlFrom>> {
+    private static class FromVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlFrom>> {
 
         @Override
         public boolean visit(JpqlFrom fromClause, ValueHolder<JpqlFrom> fromClauseHolder) {
@@ -120,7 +120,7 @@ public class JpqlStatementHolder implements Cloneable {
         }
     }
 
-    private class WhereVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlWhere>> {
+    private static class WhereVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlWhere>> {
 
         @Override
         public boolean visit(JpqlWhere theWhereClause, ValueHolder<JpqlWhere> theWhereClauseHolder) {
@@ -129,7 +129,7 @@ public class JpqlStatementHolder implements Cloneable {
         }
     }
 
-    private class PathVisitor extends JpqlVisitorAdapter<List<JpqlPath>> {
+    private static class PathVisitor extends JpqlVisitorAdapter<List<JpqlPath>> {
 
         @Override
         public boolean visit(JpqlPath path, List<JpqlPath> paths) {

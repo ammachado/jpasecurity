@@ -15,6 +15,7 @@
  */
 package org.jpasecurity.security.rules;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,14 +29,13 @@ import org.jpasecurity.util.AbstractAnnotationParser;
 public class EjbRolesAllowedParser extends AbstractAnnotationParser<RolesAllowed, Set<String>> {
 
     public Set<String> parseAllowedRoles(Class<?> annotatedClass) {
-        Set<String> rolesAllowed = new HashSet<String>();
+        Set<String> rolesAllowed = new HashSet<>();
         parse(annotatedClass, rolesAllowed);
         return rolesAllowed;
     }
 
+    @Override
     protected void process(RolesAllowed annotation, Set<String> rolesAllowed) {
-        for (String role: annotation.value()) {
-            rolesAllowed.add(role);
-        }
+        Collections.addAll(rolesAllowed, annotation.value());
     }
 }

@@ -30,10 +30,12 @@ public abstract class AbstractSubselectEvaluator implements SubselectEvaluator {
 
     protected QueryEvaluator evaluator;
 
+    @Override
     public void setQueryEvaluator(QueryEvaluator evaluator) {
         this.evaluator = evaluator;
     }
 
+    @Override
     public Collection<?> evaluate(JpqlCompiledStatement subselect,
                                   QueryEvaluationParameters parameters) throws NotEvaluatableException {
         parameters.setResultUndefined();

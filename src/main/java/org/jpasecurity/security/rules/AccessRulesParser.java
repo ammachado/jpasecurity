@@ -153,7 +153,7 @@ public class AccessRulesParser {
         whereClause.visit(pathVisitor, new HashSet<Alias>());
     }
 
-    private class AliasVisitor extends JpqlVisitorAdapter<Set<Alias>> {
+    private static class AliasVisitor extends JpqlVisitorAdapter<Set<Alias>> {
 
         @Override
         public boolean visit(JpqlSelectExpressions select) {

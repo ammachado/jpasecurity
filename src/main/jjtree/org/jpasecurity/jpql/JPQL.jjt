@@ -637,7 +637,7 @@ void simpleEntityOrValueExpression() #SimpleEntityOrValueExpression: {} {
 }
 
 void existsExpression() #Exists: {} {
-    [<NOT> #Not] <EXISTS> <LEFT_PAREN> subQuery() <RIGHT_PAREN>
+    <EXISTS> <LEFT_PAREN> subQuery() <RIGHT_PAREN>
 }
 
 void allOrAnyExpression(): {} {

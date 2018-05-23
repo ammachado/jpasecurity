@@ -29,7 +29,6 @@ import org.jpasecurity.util.ListHashMap;
 import org.jpasecurity.util.ListMap;
 import org.jpasecurity.xml.AbstractXmlParser;
 import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
@@ -87,7 +86,7 @@ public class XmlAccessRulesProvider implements AccessRulesProvider {
 
             private static final String ACCESS_RULE_TAG = "access-rule";
 
-            private ListMap<String, String> accessRules = new ListHashMap<String, String>();
+            private ListMap<String, String> accessRules = new ListHashMap<>();
 
             private String persistenceUnit;
 
@@ -97,8 +96,8 @@ public class XmlAccessRulesProvider implements AccessRulesProvider {
                 return accessRules.getNotNull(persistenceUnit);
             }
 
-            public void startElement(String uri, String tag, String qualified, Attributes attributes)
-                throws SAXException {
+            @Override
+            public void startElement(String uri, String tag, String qualified, Attributes attributes) {
                 if (PERSISTENCE_UNIT_TAG.equals(qualified)) {
                     persistenceUnit = attributes.getValue(PERSISTENCE_UNIT_NAME_ATTRIBUTE);
                 } else if (ACCESS_RULE_TAG.equals(qualified)) {
@@ -106,13 +105,13 @@ public class XmlAccessRulesProvider implements AccessRulesProvider {
                 }
             }
 
-            public void characters(char[] chars, int start, int length)
-                throws SAXException {
+            @Override
+            public void characters(char[] chars, int start, int length) {
                 accessRule.append(chars, start, length);
             }
 
-            public void endElement(String uri, String tag, String qualified)
-                throws SAXException {
+            @Override
+            public void endElement(String uri, String tag, String qualified) {
                 if (ACCESS_RULE_TAG.equals(qualified)) {
                     accessRules.add(persistenceUnit, accessRule.toString());
                 }

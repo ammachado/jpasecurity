@@ -33,11 +33,12 @@ public class PermitParser extends AbstractAnnotationParser<Permit, Map<Class<?>,
      * @return a map containing the {@link Permit} annotations for the specified classes
      */
     public Map<Class<?>, Permit> parsePermissions(Class<?>... classes) {
-        Map<Class<?>, Permit> permissions = new HashMap<Class<?>, Permit>();
+        Map<Class<?>, Permit> permissions = new HashMap<>();
         parse(classes, permissions);
         return permissions;
     }
 
+    @Override
     protected void process(Class<?> annotatedClass, Permit permit, Map<Class<?>, Permit> permissions) {
         permissions.put(annotatedClass, permit);
     }

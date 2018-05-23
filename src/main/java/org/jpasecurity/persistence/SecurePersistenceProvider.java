@@ -299,7 +299,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             Class<?> persistenceProviderClass
                 = getClassLoader(persistenceUnitInfo).loadClass(nativePersistenceProviderClassName);
             properties.put(PERSISTENCE_PROVIDER_PROPERTY, nativePersistenceProviderClassName);
-            return (PersistenceProvider)persistenceProviderClass.newInstance();
+            return (PersistenceProvider)persistenceProviderClass.getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }
@@ -346,7 +346,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             }
             Class<?> persistenceProviderClass
                 = Thread.currentThread().getContextClassLoader().loadClass(persistenceProviderClassName);
-            return (PersistenceProvider)persistenceProviderClass.newInstance();
+            return (PersistenceProvider)persistenceProviderClass.getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }

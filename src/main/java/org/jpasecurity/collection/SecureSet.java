@@ -33,7 +33,8 @@ public class SecureSet<E> extends AbstractSecureCollection<E, Set<E>> implements
         super(original, filtered);
     }
 
+    @Override
     protected Set<E> createFiltered() {
-        return new LinkedHashSet<E>();
+        return new LinkedHashSet<>();
     }
 }

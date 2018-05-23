@@ -28,6 +28,7 @@ public class RolePrincipal implements Principal {
         this.name = name;
     }
 
+    @Override
     public String getName() {
         return name;
     }

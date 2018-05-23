@@ -29,6 +29,7 @@ public class SecurePersitenceUnitInfo extends DelegatingPersistenceUnitInfo {
         this.persistenceProviderClassName = persistenceProviderClassName;
     }
 
+    @Override
     public String getPersistenceProviderClassName() {
         return persistenceProviderClassName;
     }

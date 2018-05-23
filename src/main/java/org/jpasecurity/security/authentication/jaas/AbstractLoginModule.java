@@ -44,6 +44,7 @@ public abstract class AbstractLoginModule<P extends Principal> implements LoginM
      * If you want to intercept the initialization process, you can override
      * {@link #postConstruct(Subject, CallbackHandler, Map, Map)}.
      */
+    @Override
     public final void initialize(Subject subject,
                                  CallbackHandler callbackHandler,
                                  Map<String, ?> sharedState,
@@ -76,6 +77,7 @@ public abstract class AbstractLoginModule<P extends Principal> implements LoginM
      * It calls {@link #authenticate(String, String)} which has to be implemented by subclasses
      * of this class.
      */
+    @Override
     public final boolean login() throws LoginException {
         try {
             principal = null;
@@ -86,9 +88,7 @@ public abstract class AbstractLoginModule<P extends Principal> implements LoginM
             String username = ((NameCallback)callbacks[0]).getName();
             String password = new String(((PasswordCallback)callbacks[1]).getPassword());
             principal = authenticate(username, password);
-        } catch (IOException e) {
-            throw (LoginException)new LoginException().initCause(e);
-        } catch (UnsupportedCallbackException e) {
+        } catch (IOException | UnsupportedCallbackException e) {
             throw (LoginException)new LoginException().initCause(e);
         }
         return principal != null;
@@ -109,7 +109,8 @@ public abstract class AbstractLoginModule<P extends Principal> implements LoginM
      * This method is called by the JAAS engine on logout.
      * If you want to intercept the logout process you may override {@link #canLogout()}.
      */
-    public final boolean logout() throws LoginException {
+    @Override
+    public final boolean logout() {
         if (canLogout()) {
             principal = null;
         }
@@ -130,7 +131,8 @@ public abstract class AbstractLoginModule<P extends Principal> implements LoginM
      * It calls {@link #getAdditionalPrincipals()} to enable subclasses to provide additional
      * principals such as roles.
      */
-    public final boolean commit() throws LoginException {
+    @Override
+    public final boolean commit() {
         if (principal == null) {
             return false;
         }
@@ -161,7 +163,8 @@ public abstract class AbstractLoginModule<P extends Principal> implements LoginM
      * This method is called by the JAAS engine to indicate that some other login module
      * prevents authentication. This implementation calls {@link #login()}.
      */
-    public boolean abort() throws LoginException {
+    @Override
+    public boolean abort() {
         if (principal == null) {
             return false;
         }

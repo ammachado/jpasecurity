@@ -37,6 +37,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
     private AbstractEntityTag entityTag;
     private AccessManager accessManager;
 
+    @Override
     public void setUp() {
         entityTag = createEntityTag();
         entityTag.setPageContext(pageContext);
@@ -44,6 +45,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         accessManager = mock(AccessManager.class);
     }
 
+    @Override
     public void tearDown() {
         entityTag.release();
     }

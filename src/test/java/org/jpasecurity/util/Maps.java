@@ -24,11 +24,11 @@ import java.util.Map;
 public final class Maps {
 
     public static <K, V> Map.Entry<K, V> entry(K key, V value) {
-        return new MapEntry<K, V>(key, value);
+        return new MapEntry<>(key, value);
     }
 
     public static <K, V> Map<K, V> map(Map.Entry<K, V>... entries) {
-        Map<K, V> map = new HashMap<K, V>();
+        Map<K, V> map = new HashMap<>();
         for (Map.Entry<K, V> entry: entries) {
             map.put(entry.getKey(), entry.getValue());
         }
@@ -49,14 +49,17 @@ public final class Maps {
             this.value = value;
         }
 
+        @Override
         public K getKey() {
             return key;
         }
 
+        @Override
         public V getValue() {
             return value;
         }
 
+        @Override
         public V setValue(V value) {
             V oldValue = this.value;
             this.value = value;

@@ -82,7 +82,7 @@ public class AutodetectingSecurityContext implements SecurityContext {
                 Class<? extends SecurityContext> securityContextClass
                     = (Class<? extends SecurityContext>)currentClassLoader.loadClass(providerClassName);
                 LOG.info("autodetected presence of class {}", providerClassName);
-                SecurityContext securityContext = securityContextClass.newInstance();
+                SecurityContext securityContext = securityContextClass.getConstructor().newInstance();
                 LOG.info("using {}", providerClassName);
                 return securityContext;
             } catch (NoClassDefFoundError | ReflectiveOperationException e) {

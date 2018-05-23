@@ -29,11 +29,13 @@ public class DefaultSecurityContextTest extends AbstractSecurityContextTest {
 
     private DefaultSecurityContext context;
 
+    @Override
     public SecurityContext createSecurityContext() {
         context = new DefaultSecurityContext();
         return context;
     }
 
+    @Override
     public void authenticate(Object principal, String... roles) {
         context.register(AbstractRoleBasedSecurityContext.CURRENT_PRINCIPAL, principal);
         context.register(AbstractRoleBasedSecurityContext.CURRENT_ROLES, Arrays.asList(roles));

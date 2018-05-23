@@ -29,6 +29,8 @@ import javax.persistence.Id;
 import org.jpasecurity.security.Permit;
 import org.jpasecurity.security.PermitAny;
 
+import java.util.Objects;
+
 @Entity
 @PermitAny({
     @Permit(access = { CREATE, READ }, where = "status = org.jpasecurity.model.TaskStatus.OPEN"),
@@ -78,6 +80,6 @@ public class Task {
             return false;
         }
         Task task = (Task)object;
-        return id == task.id;
+        return Objects.equals(id, task.id);
     }
 }
