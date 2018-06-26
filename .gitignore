@@ -1,7 +1,8 @@
 *.class
 
 # Hidden files
-.*
+.idea
+.vscode
 
 # Package Files #
 *.jar
@@ -12,7 +13,7 @@
 hs_err_pid*
 
 # Maven target folder
-target
+target/
 
 
 #### IDEA STUFF
@@ -43,11 +44,17 @@ target
 
 ## File-based project format:
 *.iws
+*.iml
 
 ## Plugin-specific files:
 
 # IntelliJ
-/out/
+out/
+
+# Eclipse / VSCode
+.classpath
+.project
+.settings/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/

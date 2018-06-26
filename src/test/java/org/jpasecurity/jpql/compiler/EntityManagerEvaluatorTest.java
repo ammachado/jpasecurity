@@ -19,6 +19,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,15 +39,13 @@ import javax.persistence.metamodel.Metamodel;
 import javax.persistence.metamodel.PluralAttribute;
 import javax.persistence.metamodel.SingularAttribute;
 
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.jpasecurity.Alias;
 import org.jpasecurity.access.DefaultAccessManager;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
 import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.JpqlStatement;
-import org.jpasecurity.jpql.parser.JpqlSubselect;
-import org.jpasecurity.jpql.parser.Node;
-import org.jpasecurity.jpql.parser.ParseException;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.model.ChildTestBean;
 import org.jpasecurity.model.MethodAccessTestBean;
 import org.jpasecurity.model.ParentTestBean;
@@ -64,21 +63,18 @@ public class EntityManagerEvaluatorTest {
     private static final String SELECT = "SELECT bean FROM MethodAccessTestBean bean ";
 
     private DefaultAccessManager accessManager;
-    private Metamodel metamodel;
-    private JpqlParser parser;
     private JpqlCompiler compiler;
     private QueryEvaluationParameters parameters;
     private EntityManager entityManager;
-    private Map<Alias, Object> aliases = new HashMap<Alias, Object>();
-    private Map<String, Object> namedParameters = new HashMap<String, Object>();
-    private Map<Integer, Object> positionalParameters = new HashMap<Integer, Object>();
-    private SetMap<Class<?>, Object> entities = new SetHashMap<Class<?>, Object>();
+    private Map<Alias, Object> aliases = new HashMap<>();
+    private Map<String, Object> namedParameters = new HashMap<>();
+    private Map<Integer, Object> positionalParameters = new HashMap<>();
+    private SetMap<Class<?>, Object> entities = new SetHashMap<>();
     private EntityManagerEvaluator entityManagerEvaluator;
-
 
     @Before
     public void initialize() throws NoSuchMethodException {
-        metamodel = mock(Metamodel.class);
+        Metamodel metamodel = mock(Metamodel.class);
         SecurePersistenceUnitUtil persistenceUnitUtil = mock(SecurePersistenceUnitUtil.class);
 
         EntityType methodAccessTestBeanType = mock(EntityType.class);
@@ -90,19 +86,19 @@ public class EntityManagerEvaluatorTest {
         SingularAttribute parentAttribute = mock(SingularAttribute.class);
         PluralAttribute childrenAttribute = mock(PluralAttribute.class);
         PluralAttribute relatedAttribute = mock(PluralAttribute.class);
-        when(metamodel.getEntities()).thenReturn(new HashSet<EntityType<?>>(Arrays.<EntityType<?>>asList(
+        when(metamodel.getEntities()).thenReturn(new HashSet<>(Arrays.<EntityType<?>>asList(
                 methodAccessTestBeanType, childTestBeanType)));
-        when(metamodel.entity(MethodAccessTestBean.class)).thenReturn(methodAccessTestBeanType);
-        when(metamodel.managedType(MethodAccessTestBean.class)).thenReturn(methodAccessTestBeanType);
-        when(metamodel.entity(ChildTestBean.class)).thenReturn(childTestBeanType);
-        when(metamodel.managedType(ChildTestBean.class)).thenReturn(childTestBeanType);
+        doReturn(methodAccessTestBeanType).when(metamodel).entity(MethodAccessTestBean.class);
+        doReturn(methodAccessTestBeanType).when(metamodel).managedType(MethodAccessTestBean.class);
+        doReturn(childTestBeanType).when(metamodel).entity(ChildTestBean.class);
+        doReturn(childTestBeanType).when(metamodel).managedType(ChildTestBean.class);
         when(metamodel.managedType(ParentTestBean.class))
             .thenThrow(new IllegalArgumentException("managed type not found"));
         when(metamodel.embeddable(ParentTestBean.class))
             .thenThrow(new IllegalArgumentException("embeddable not found"));
         when(methodAccessTestBeanType.getName()).thenReturn(MethodAccessTestBean.class.getSimpleName());
-        when(methodAccessTestBeanType.getJavaType()).thenReturn((Class)MethodAccessTestBean.class);
-        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet(Arrays.asList(
+        when(methodAccessTestBeanType.getJavaType()).thenReturn(MethodAccessTestBean.class);
+        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet<>(Arrays.asList(
                 idAttribute, nameAttribute, parentAttribute, childrenAttribute, relatedAttribute)));
         when(methodAccessTestBeanType.getAttribute("id")).thenReturn(idAttribute);
         when(methodAccessTestBeanType.getAttribute("name")).thenReturn(nameAttribute);
@@ -110,7 +106,7 @@ public class EntityManagerEvaluatorTest {
         when(methodAccessTestBeanType.getAttribute("children")).thenReturn(childrenAttribute);
         when(methodAccessTestBeanType.getAttribute("related")).thenReturn(relatedAttribute);
         when(childTestBeanType.getName()).thenReturn(ChildTestBean.class.getSimpleName());
-        when(childTestBeanType.getJavaType()).thenReturn((Class)ChildTestBean.class);
+        when(childTestBeanType.getJavaType()).thenReturn(ChildTestBean.class);
         when(idAttribute.getName()).thenReturn("id");
         when(idAttribute.isCollection()).thenReturn(false);
         when(idAttribute.getType()).thenReturn(intType);
@@ -136,13 +132,13 @@ public class EntityManagerEvaluatorTest {
         when(relatedAttribute.getJavaMember())
             .thenReturn(MethodAccessTestBean.class.getDeclaredMethod("getRelated"));
 
-        parser = new JpqlParser();
         compiler = new JpqlCompiler(metamodel);
         entityManager = mock(EntityManager.class);
         when(entityManager.isOpen()).thenReturn(true);
         when(entityManager.createQuery(
             anyString()))
             .thenAnswer(new Answer<Query>() {
+                @Override
                 public Query answer(InvocationOnMock invocation) throws Throwable {
                     Query mock = mock(Query.class);
                     when(mock.setParameter(anyString(), any())).thenReturn(mock);
@@ -196,39 +192,41 @@ public class EntityManagerEvaluatorTest {
     }
 
     @Test
-    public void evaluateSubselectCanEvaluateIsAccessible() throws Exception {
+    public void evaluateSubselectCanEvaluateIsAccessible() {
         JpqlCompiledStatement jpqlCompiledStatement = getCompiledSubselect(
             SELECT
                 + "WHERE EXISTS (SELECT innerBean "
                 + " FROM MethodAccessTestBean innerBean"
                 + " WHERE innerBean=bean)");
-        JpqlSubselect subselect = (JpqlSubselect)jpqlCompiledStatement.getStatement();
+        JpqlParser.SubQueryContext subselect =
+                (JpqlParser.SubQueryContext)jpqlCompiledStatement.getStatement();
         assertTrue(entityManagerEvaluator.canEvaluate(subselect, parameters));
     }
 
     @Test
-    public void evaluateSubselectCanEvaluateIsAccessibleNoDbAccessHint() throws Exception {
+    public void evaluateSubselectCanEvaluateIsAccessibleNoDbAccessHint() {
         JpqlCompiledStatement jpqlCompiledStatement = getCompiledSubselect(
             SELECT
-                + "WHERE EXISTS " + "(SELECT /* IS_ACCESSIBLE_NODB */ innerBean "
+                + "WHERE EXISTS (SELECT /* IS_ACCESSIBLE_NODB */ innerBean "
                 + " FROM MethodAccessTestBean innerBean"
                 + " WHERE innerBean=bean)");
-        JpqlSubselect subselect = (JpqlSubselect)jpqlCompiledStatement.getStatement();
+        JpqlParser.SubQueryContext subselect =
+                (JpqlParser.SubQueryContext)jpqlCompiledStatement.getStatement();
         assertFalse(entityManagerEvaluator.canEvaluate(subselect, parameters));
     }
 
-    private JpqlCompiledStatement getCompiledSubselect(String query) throws ParseException {
+    private JpqlCompiledStatement getCompiledSubselect(String query) {
         JpqlCompiledStatement statement = compile(query);
         return compiler.compile(findSubSelect(statement.getStatement()));
     }
 
-    private JpqlSubselect findSubSelect(Node node) {
-        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-            Node child = node.jjtGetChild(i);
-            if (child instanceof JpqlSubselect) {
-                return (JpqlSubselect)child;
+    private JpqlParser.SubQueryContext findSubSelect(ParseTree node) {
+        for (int i = 0; i < node.getChildCount(); i++) {
+            ParseTree child = node.getChild(i);
+            if (child instanceof JpqlParser.SubQueryContext) {
+                return (JpqlParser.SubQueryContext)child;
             } else {
-                final JpqlSubselect subSelect = findSubSelect(child);
+                final JpqlParser.SubQueryContext subSelect = findSubSelect(child);
                 if (subSelect != null) {
                     return subSelect;
                 }
@@ -237,12 +235,12 @@ public class EntityManagerEvaluatorTest {
         return null;
     }
 
-    private JpqlCompiledStatement compile(String query) throws ParseException {
-        JpqlStatement statement = parser.parseQuery(query);
+    private JpqlCompiledStatement compile(String query) {
+        JpqlParser.StatementContext statement = JpqlParsingHelper.parseQuery(query);
         return compile(statement);
     }
 
-    private JpqlCompiledStatement compile(JpqlStatement statement) {
+    private JpqlCompiledStatement compile(JpqlParser.StatementContext statement) {
         return compiler.compile(statement);
     }
 }

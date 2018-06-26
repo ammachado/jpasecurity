@@ -19,39 +19,68 @@ import static org.jpasecurity.util.Validate.notNull;
 
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
-import org.jpasecurity.jpql.parser.Node;
+import org.jpasecurity.jpql.BaseContext;
+import org.jpasecurity.jpql.TreeRewriteSupport;
+import org.jpasecurity.jpql.parser.JpqlParser;
 
 /**
  * @author Arne Limburg
  */
 public class ConditionalPath extends Path {
 
-    private Node condition;
+    private final BaseContext condition;
 
-    public ConditionalPath(String path, Node conditionNode) {
+    public ConditionalPath(String path, JpqlParser.SimpleCaseStatementContext conditionNode) {
         super(path);
         notNull("Condition", conditionNode);
-        condition = conditionNode.clone();
+        condition = TreeRewriteSupport.copy(conditionNode);
     }
 
-    ConditionalPath(Alias alias, String subpath, Node conditionNode) {
-        super(alias, subpath);
+    public ConditionalPath(Alias alias, String subPath, JpqlParser.SearchedCaseStatementContext conditionNode) {
+        super(alias, subPath);
         notNull("Condition", conditionNode);
-        condition = conditionNode.clone();
+        condition = TreeRewriteSupport.copy(conditionNode);
     }
 
-    public Node getCondition() {
-        return condition.clone();
+    public ConditionalPath(String path, JpqlParser.ExpressionContext conditionNode) {
+        super(path);
+        notNull("Condition", conditionNode);
+        condition = TreeRewriteSupport.copy(conditionNode);
     }
 
-    public ConditionalPath newCondition(Node condition) {
+    public ConditionalPath(Alias alias, String subPath, JpqlParser.ExpressionContext conditionNode) {
+        super(alias, subPath);
+        notNull("Condition", conditionNode);
+        condition = TreeRewriteSupport.copy(conditionNode);
+    }
+
+    public ConditionalPath(String path, JpqlParser.PredicateContext conditionNode) {
+        super(path);
+        notNull("Condition", conditionNode);
+        condition = TreeRewriteSupport.copy(conditionNode);
+    }
+
+    public ConditionalPath(Alias alias, String subPath, JpqlParser.PredicateContext conditionNode) {
+        super(alias, subPath);
+        notNull("Condition", conditionNode);
+        condition = TreeRewriteSupport.copy(conditionNode);
+    }
+
+    public BaseContext getCondition() {
+        return TreeRewriteSupport.copy(condition);
+    }
+
+    public ConditionalPath newCondition(JpqlParser.ExpressionContext condition) {
         return new ConditionalPath(getRootAlias(), getSubpath(), condition);
     }
 
+    @Override
     public ConditionalPath getParentPath() {
-        return new ConditionalPath(super.getParentPath().toString(), condition);
+        //return new ConditionalPath(super.getParentPath().toString(), condition);
+        throw new UnsupportedOperationException();
     }
 
+    @Override
     public String toString() {
         return "WHEN " + condition + " THEN " + super.toString();
     }

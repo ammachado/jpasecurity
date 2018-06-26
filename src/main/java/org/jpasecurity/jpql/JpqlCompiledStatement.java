@@ -20,11 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.persistence.metamodel.Metamodel;
-
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.jpasecurity.Path;
-import org.jpasecurity.jpql.parser.Node;
 
 /**
  * This class represents compiled JPQL statements.
@@ -38,7 +36,7 @@ public class JpqlCompiledStatement extends JpqlStatementHolder {
     private Set<TypeDefinition> typeDefinitions;
     private Set<String> namedParameters;
 
-    public JpqlCompiledStatement(Node statement,
+    public JpqlCompiledStatement(ParserRuleContext statement,
                                  Class<?> constructorArgReturnType,
                                  List<Path> selectedPathes,
                                  Set<TypeDefinition> typeDefinitions,
@@ -50,7 +48,7 @@ public class JpqlCompiledStatement extends JpqlStatementHolder {
         this.namedParameters = namedParameters;
     }
 
-    public JpqlCompiledStatement(Node statement) {
+    public JpqlCompiledStatement(ParserRuleContext statement) {
         this(statement,
              null,
              Collections.<Path>emptyList(),
@@ -81,7 +79,7 @@ public class JpqlCompiledStatement extends JpqlStatementHolder {
      * @see #getSelectedPaths()
      */
     public Map<Path, Class<?>> getSelectedTypes(Metamodel metamodel) {
-        Map<Path, Class<?>> selectedTypes = new HashMap<Path, Class<?>>();
+        Map<Path, Class<?>> selectedTypes = new HashMap<>();
         for (Path selectedPath: getSelectedPaths()) {
             selectedTypes.put(selectedPath,
                     TypeDefinition.Filter.managedTypeForPath(selectedPath)
@@ -103,6 +101,7 @@ public class JpqlCompiledStatement extends JpqlStatementHolder {
         return namedParameters;
     }
 
+    @Override
     public JpqlCompiledStatement clone() {
         return (JpqlCompiledStatement)super.clone();
     }

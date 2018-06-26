@@ -40,7 +40,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-public class XmlParser {
+final class XmlParser {
 
     private static final String PERSISTENCE_PROVIDER_XPATH = "/*[local-name()=''persistence'']"
         + "/*[local-name()=''persistence-unit'' and @name=''{0}'']/*[local-name()=''provider'']/text()";
@@ -58,12 +58,12 @@ public class XmlParser {
     private XPath xpath;
     private List<Document> documents;
 
-    public XmlParser(String... resourceNames)
+    XmlParser(String... resourceNames)
         throws ParserConfigurationException, SAXException, IOException, URISyntaxException {
         this(getResources(resourceNames));
     }
 
-    public XmlParser(Collection<URL> documentUrls)
+    XmlParser(Collection<URL> documentUrls)
         throws ParserConfigurationException, SAXException, IOException, URISyntaxException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         documentBuilderFactory.setNamespaceAware(false);
@@ -72,23 +72,23 @@ public class XmlParser {
         documents = loadDocuments(documentUrls);
     }
 
-    public String parsePersistenceProvider(String name) throws XPathExpressionException {
+    String parsePersistenceProvider(String name) throws XPathExpressionException {
         return parseValue(MessageFormat.format(PERSISTENCE_PROVIDER_XPATH, name));
     }
 
-    public String parsePersistenceProperty(String unitName, String propertyName) throws XPathExpressionException {
+    String parsePersistenceProperty(String unitName, String propertyName) throws XPathExpressionException {
         return parseValue(MessageFormat.format(PERSISTENCE_PROPERTY_XPATH, unitName, propertyName));
     }
 
-    public Set<String> parseMappingFileNames(String unitName) throws XPathExpressionException {
+    Set<String> parseMappingFileNames(String unitName) throws XPathExpressionException {
         return parseValues(MessageFormat.format(MAPPING_FILE_XPATH, unitName));
     }
 
-    public Set<Node> parseGlobalNamedQueries() throws XPathExpressionException {
+    Set<Node> parseGlobalNamedQueries() throws XPathExpressionException {
         return parseNodeSet(GLOBAL_NAMED_QUERY_XPATH);
     }
 
-    public Set<Node> parseEntityNamedQueries() throws XPathExpressionException {
+    Set<Node> parseEntityNamedQueries() throws XPathExpressionException {
         return parseNodeSet(ENTITY_NAMED_QUERY_XPATH);
     }
 
@@ -104,7 +104,7 @@ public class XmlParser {
     }
 
     private Set<String> parseValues(String xpathExpression) throws XPathExpressionException {
-        Set<String> result = new HashSet<String>();
+        Set<String> result = new HashSet<>();
         XPathExpression expression = xpath.compile(xpathExpression);
         for (Document document: documents) {
             NodeList values = (NodeList)expression.evaluate(document, XPathConstants.NODESET);
@@ -116,7 +116,7 @@ public class XmlParser {
     }
 
     private Set<Node> parseNodeSet(String xpathExpression) throws XPathExpressionException {
-        Set<Node> nodeSet = new HashSet<Node>();
+        Set<Node> nodeSet = new HashSet<>();
         XPathExpression expression = xpath.compile(xpathExpression);
         for (Document document: documents) {
             NodeList result = (NodeList)expression.evaluate(document, XPathConstants.NODESET);
@@ -128,7 +128,7 @@ public class XmlParser {
     }
 
     private static Collection<URL> getResources(String... resourceNames) throws IOException {
-        List<URL> resources = new ArrayList<URL>();
+        List<URL> resources = new ArrayList<>();
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         for (String resourceName: resourceNames) {
             resources.addAll(Collections.list(classLoader.getResources(resourceName)));
@@ -137,7 +137,7 @@ public class XmlParser {
     }
 
     private List<Document> loadDocuments(Collection<URL> urls) throws SAXException, IOException, URISyntaxException {
-        List<Document> documents = new ArrayList<Document>();
+        List<Document> documents = new ArrayList<>();
         for (URL documentUrl: urls) {
             Document document = builder.parse(documentUrl.toURI().toString());
             documents.add(document);

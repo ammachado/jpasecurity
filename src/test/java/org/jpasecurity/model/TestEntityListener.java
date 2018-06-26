@@ -52,15 +52,15 @@ public class TestEntityListener {
         }
     }
 
-    public static class PublicTestMethodCalledException extends RuntimeException {
+    private static class PublicTestMethodCalledException extends RuntimeException {
     }
 
-    public static class ProtectedTestMethodCalledException extends RuntimeException {
+    private static class ProtectedTestMethodCalledException extends RuntimeException {
     }
 
-    public static class PackageProtectedTestMethodCalledException extends RuntimeException {
+    private static class PackageProtectedTestMethodCalledException extends RuntimeException {
     }
 
-    public static class PrivateTestMethodCalledException extends RuntimeException {
+    private static class PrivateTestMethodCalledException extends RuntimeException {
     }
 }

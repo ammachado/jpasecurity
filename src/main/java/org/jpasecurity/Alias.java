@@ -15,25 +15,29 @@
  */
 package org.jpasecurity;
 
+import java.util.Objects;
+
 /**
  * A class that represents an alias in an access rule or query
  * @author Arne Limburg
  */
 public class Alias {
 
-    private String name;
-
     public static Alias alias(String name) {
         return new Alias(name);
     }
+
+    private final String name;
 
     public Alias(String name) {
         if (name == null) {
             throw new IllegalArgumentException("name may not be null");
         }
+
         if (name.indexOf('.') != -1) {
             throw new IllegalArgumentException("name may not contain dots ('.')");
         }
+
         this.name = name;
     }
 
@@ -45,14 +49,17 @@ public class Alias {
         return new Path(this, null);
     }
 
+    @Override
     public String toString() {
         return getName();
     }
 
+    @Override
     public int hashCode() {
-        return name.toLowerCase().hashCode();
+        return Objects.hashCode(name.toLowerCase());
     }
 
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof Alias)) {
             return false;

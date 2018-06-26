@@ -18,20 +18,19 @@ package org.jpasecurity.jpql.compiler;
 import java.util.Collection;
 
 import org.jpasecurity.jpql.JpqlCompiledStatement;
-
-import org.jpasecurity.jpql.parser.JpqlSubselect;
+import org.jpasecurity.jpql.parser.JpqlParser;
 
 /**
- * An interface to be implemented by classes that are able to evaluate
- * subselects.
+ * An interface to be implemented by classes that are able to evaluate subselects.
+ *
  * @author Arne Limburg
  */
-public interface SubselectEvaluator {
+public interface SubQueryEvaluator {
 
     void setQueryEvaluator(QueryEvaluator evaluator);
 
-    Collection<?> evaluate(JpqlCompiledStatement subselect, QueryEvaluationParameters parameters)
-        throws NotEvaluatableException;
+    Collection<?> evaluate(JpqlCompiledStatement subQuery, QueryEvaluationParameters parameters)
+            throws NotEvaluatableException;
 
-    boolean canEvaluate(JpqlSubselect node, QueryEvaluationParameters evaluationParameters);
+    boolean canEvaluate(JpqlParser.SubQueryContext subQuery, QueryEvaluationParameters evaluationParameters);
 }

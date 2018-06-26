@@ -28,13 +28,13 @@ import javax.persistence.criteria.Selection;
 import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 public class CriteriaBuilderTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("client");
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("client");
 
     private static final String EMAIL = "test@test.org";
 
@@ -45,7 +45,7 @@ public class CriteriaBuilderTest {
 
     @Test
     public void criteria() {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaBuilder cb = ENTITY_MANAGER.getCriteriaBuilder();
         CriteriaQuery<ClientEntityBrowserDto> c = cb.createQuery(ClientEntityBrowserDto.class);
         Root<Client> client = c.from(Client.class);
 
@@ -54,18 +54,19 @@ public class CriteriaBuilderTest {
         Join<ClientType, ClientTypeGroup> clientTypeGroup
             = client.join("type", JoinType.LEFT).join("clientTypeGroup", JoinType.LEFT);
 
-        Selection<ClientEntityBrowserDto> selection
-            = cb.construct(ClientEntityBrowserDto.class,
-                           client.<Integer>get("id"),
-                           client.<String>get("number"),
-                           client.<String>get("name"),
-                           clientTypeGroup.<String>get("name"),
-                           clientGroup.<String>get("name"),
-                           clientStructure.<String>get("name"));
+        Selection<ClientEntityBrowserDto> selection = cb.construct(
+            ClientEntityBrowserDto.class,
+            client.get(Client_.id),
+            client.get(Client_.number),
+            client.get(Client_.name),
+            clientTypeGroup.get(ClientTypeGroup_.name),
+            clientGroup.get(ClientGroup_.name),
+            clientStructure.get(ClientStructure_.name)
+        );
 
         c.select(selection);
         c.distinct(true);
-        TypedQuery<ClientEntityBrowserDto> query = entityManager.createQuery(c);
+        TypedQuery<ClientEntityBrowserDto> query = ENTITY_MANAGER.createQuery(c);
         assertTrue(query.getResultList().isEmpty());
     }
 }

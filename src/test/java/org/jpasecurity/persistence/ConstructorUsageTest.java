@@ -25,16 +25,14 @@ import javax.persistence.Query;
 import org.jpasecurity.model.FieldAccessAnnotationTestBean;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author Stefan Hildebrandt
  */
-@Ignore
 public class ConstructorUsageTest {
 
-    public static final String USER1 = "user1";
+    private static final String USER1 = "user1";
 
     @Test
     public void oneConstructorArgumentList() {
@@ -86,6 +84,7 @@ public class ConstructorUsageTest {
         Assert.assertEquals(parent.getIdentifier(), actual.getParentBean().getIdentifier());
         entityManager.close();
     }
+
     @Test
     public void oneConstructorArgumentSingleResult() {
         TestSecurityContext.authenticate(USER1);

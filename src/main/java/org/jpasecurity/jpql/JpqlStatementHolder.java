@@ -19,13 +19,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.jpasecurity.jpql.parser.JpqlFrom;
-import org.jpasecurity.jpql.parser.JpqlParserVisitor;
-import org.jpasecurity.jpql.parser.JpqlPath;
-import org.jpasecurity.jpql.parser.JpqlSubselect;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.jpasecurity.jpql.parser.JpqlParser;
+import org.jpasecurity.jpql.parser.JpqlParserBaseVisitor;
+import org.jpasecurity.jpql.parser.JpqlValueHolderVisitor;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
-import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.Node;
 import org.jpasecurity.util.ValueHolder;
 
 /**
@@ -33,59 +31,52 @@ import org.jpasecurity.util.ValueHolder;
  */
 public class JpqlStatementHolder implements Cloneable {
 
-    private Node statement;
-    private JpqlFrom fromClause;
-    private JpqlWhere whereClause;
-    private List<JpqlPath> whereClausePaths;
+    private ParserRuleContext statement;
+    private BaseContext fromClause;
+    private JpqlParser.WhereClauseContext whereClause;
+    private List<JpqlParser.SimplePathQualifierContext> whereClausePaths;
 
-    public JpqlStatementHolder(Node statement) {
+    public JpqlStatementHolder(ParserRuleContext statement) {
         this.statement = statement;
     }
 
     /**
      * Returns the node representing this statement.
      */
-    public Node getStatement() {
+    public ParserRuleContext getStatement() {
         return statement;
     }
 
-    public JpqlFrom getFromClause() {
+    public BaseContext getFromClause() {
         if (fromClause == null) {
-            FromVisitor visitor = new FromVisitor();
-            ValueHolder<JpqlFrom> fromClauseHolder = new ValueHolder<JpqlFrom>();
-            visit(visitor, fromClauseHolder);
-            fromClause = fromClauseHolder.getValue();
+            fromClause = new FromVisitor().visit(statement).getValue();
         }
         return fromClause;
     }
 
-    public JpqlWhere getWhereClause() {
-        if (whereClause == null) {
-            WhereVisitor visitor = new WhereVisitor();
-            ValueHolder<JpqlWhere> whereClauseHolder = new ValueHolder<JpqlWhere>();
-            visit(visitor, whereClauseHolder);
-            whereClause = whereClauseHolder.getValue();
+    public JpqlParser.WhereClauseContext getWhereClause() {
+        if (this.whereClause == null) {
+            this.whereClause = new WhereVisitor().visit(statement).getValue();
         }
-        return whereClause;
+        return this.whereClause;
     }
 
-    public List<JpqlPath> getWhereClausePaths() {
-        if (whereClausePaths == null) {
-            PathVisitor visitor = new PathVisitor();
-            List<JpqlPath> whereClausePaths = new ArrayList<JpqlPath>();
-            JpqlWhere whereClause = getWhereClause();
+    public List<JpqlParser.SimplePathQualifierContext> getWhereClausePaths() {
+        if (this.whereClausePaths == null) {
+            JpqlParser.WhereClauseContext whereClause = getWhereClause();
             if (whereClause != null) {
-                whereClause.visit(visitor, whereClausePaths);
+                PathVisitor visitor = new PathVisitor();
+                this.whereClausePaths = Collections.unmodifiableList(visitor.visit(whereClause));
             }
-            this.whereClausePaths = Collections.unmodifiableList(whereClausePaths);
         }
-        return whereClausePaths;
+        return this.whereClausePaths;
     }
 
+    @Override
     public JpqlStatementHolder clone() {
         try {
             JpqlStatementHolder statement = (JpqlStatementHolder)super.clone();
-            statement.statement = statement.statement.clone();
+            statement.statement = TreeRewriteSupport.copy(statement.statement);
             statement.fromClause = null;
             statement.whereClause = null;
             statement.whereClausePaths = null;
@@ -96,39 +87,56 @@ public class JpqlStatementHolder implements Cloneable {
         }
     }
 
+    @Override
     public String toString() {
-        return getClass() + "[\"" + statement.toString() + "\"]";
+        return getClass() + "[\"" + ((BaseContext)statement).toJpqlString() + "\"]";
     }
 
-    protected <T> void visit(JpqlParserVisitor<T> visitor, T data) {
-        statement.visit(visitor, data);
+    protected <T> T visit(JpqlParserBaseVisitor<T> visitor) {
+        return visitor.visit(statement);
     }
 
-    private class FromVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlFrom>> {
+    private static class FromVisitor extends JpqlValueHolderVisitor<BaseContext> {
 
-        public boolean visit(JpqlFrom fromClause, ValueHolder<JpqlFrom> fromClauseHolder) {
-            fromClauseHolder.setValue(fromClause);
-            return false;
+        @Override
+        public ValueHolder<BaseContext> visitSelectStatement(JpqlParser.SelectStatementContext ctx) {
+            defaultResult().setValue(ctx.querySpec().fromClause());
+            return stopVisitingChildren();
         }
 
-        public boolean visit(JpqlSubselect node, ValueHolder<JpqlFrom> fromClauseHolder) {
-            return false;
+        @Override
+        public ValueHolder<BaseContext> visitUpdateStatement(JpqlParser.UpdateStatementContext ctx) {
+            defaultResult().setValue(ctx.mainEntityPersisterReference());
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public ValueHolder<BaseContext> visitDeleteStatement(JpqlParser.DeleteStatementContext ctx) {
+            defaultResult().setValue(ctx.mainEntityPersisterReference());
+            return stopVisitingChildren();
         }
     }
 
-    private class WhereVisitor extends JpqlVisitorAdapter<ValueHolder<JpqlWhere>> {
+    private static class WhereVisitor extends JpqlValueHolderVisitor<JpqlParser.WhereClauseContext> {
 
-        public boolean visit(JpqlWhere whereClause, ValueHolder<JpqlWhere> whereClauseHolder) {
-            whereClauseHolder.setValue(whereClause);
-            return false;
+        @Override
+        public ValueHolder<JpqlParser.WhereClauseContext> visitWhereClause(JpqlParser.WhereClauseContext ctx) {
+            defaultResult().setValue(ctx);
+            return stopVisitingChildren();
         }
     }
 
-    private class PathVisitor extends JpqlVisitorAdapter<List<JpqlPath>> {
+    private static class PathVisitor extends JpqlVisitorAdapter<List<JpqlParser.SimplePathQualifierContext>> {
 
-        public boolean visit(JpqlPath path, List<JpqlPath> paths) {
-            paths.add(path);
-            return false;
+        PathVisitor() {
+            super(new ArrayList<JpqlParser.SimplePathQualifierContext>());
+        }
+
+        @Override
+        public List<JpqlParser.SimplePathQualifierContext> visitSimplePathQualifier(
+                JpqlParser.SimplePathQualifierContext ctx) {
+            defaultResult().add(ctx);
+            return defaultResult();
         }
     }
 }

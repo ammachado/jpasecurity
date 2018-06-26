@@ -33,6 +33,7 @@ public class AccessControlledEntityType {
     @Id
     @GeneratedValue
     private long id;
+
     @Column(name = "class", unique = true)
     private String className;
 
@@ -57,6 +58,7 @@ public class AccessControlledEntityType {
         return className;
     }
 
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof AccessControlledEntityType)) {
             return false;
@@ -65,6 +67,7 @@ public class AccessControlledEntityType {
         return getClassName().equals(type.getClassName());
     }
 
+    @Override
     public int hashCode() {
         return className.hashCode();
     }

@@ -30,13 +30,13 @@ import javax.persistence.FlushModeType;
 import javax.persistence.Persistence;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 
 import org.jpasecurity.model.FieldAccessAnnotationTestBean;
 import org.jpasecurity.model.MethodAccessAnnotationTestBean;
 import org.jpasecurity.persistence.ParentChildTestData;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -126,8 +126,9 @@ public class AccessCheckTest {
 
         TestSecurityContext.authenticate(USER1);
         entityManager = factory.createEntityManager();
-        Query query = entityManager.createQuery("SELECT mbean FROM MethodAccessAnnotationTestBean mbean "
-                                                + "WHERE mbean.name = :name");
+        TypedQuery<MethodAccessAnnotationTestBean> query = entityManager
+                .createQuery("SELECT mbean FROM MethodAccessAnnotationTestBean mbean WHERE mbean.name = :name",
+                        MethodAccessAnnotationTestBean.class);
         query.setParameter("name", USER1);
         List<MethodAccessAnnotationTestBean> result = query.getResultList();
         assertEquals(1, result.size());
@@ -150,7 +151,6 @@ public class AccessCheckTest {
     }
 
     @Test
-    @Ignore("TODO replace persistence provider")
     public void aliasRules() {
         TestSecurityContext.authenticate(USER);
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("alias");

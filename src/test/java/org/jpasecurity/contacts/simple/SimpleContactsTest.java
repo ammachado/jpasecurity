@@ -22,22 +22,18 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.List;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
-import javax.persistence.Persistence;
 
 import org.jpasecurity.AccessManager;
 import org.jpasecurity.AccessType;
+import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.contacts.ContactsTestData;
 import org.jpasecurity.contacts.model.Contact;
 import org.jpasecurity.contacts.model.User;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -45,34 +41,22 @@ import org.junit.Test;
  */
 public class SimpleContactsTest {
 
-    private static EntityManagerFactory entityManagerFactory;
-    private ContactsTestData testData;
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("simple-contacts");
 
-    @BeforeClass
-    public static void createEntityManagerFactory() {
-        TestSecurityContext.authenticate(null, "admin");
-        entityManagerFactory = Persistence.createEntityManagerFactory("simple-contacts");
-        TestSecurityContext.unauthenticate();
-    }
-
-    @AfterClass
-    public static void closeEntityManagerFactory() {
-        entityManagerFactory.close();
-        entityManagerFactory = null;
-    }
+    private final ContactsTestData testData = new ContactsTestData();
 
     @Before
     public void createTestData() {
         TestSecurityContext.authenticate(null, "admin");
-        testData = new ContactsTestData();
-        testData.createTestData(entityManagerFactory);
+        testData.createTestData(ENTITY_MANAGER.getEntityManagerFactory());
         TestSecurityContext.unauthenticate();
     }
 
     @After
     public void removeTestData() {
         TestSecurityContext.authenticate(null, "admin");
-        testData.clearTestData(entityManagerFactory);
+        testData.clearTestData(ENTITY_MANAGER.getEntityManagerFactory());
         TestSecurityContext.authenticate(null);
     }
 
@@ -144,67 +128,63 @@ public class SimpleContactsTest {
     @Test
     public void isJohnAccessibleAsMary() {
         TestSecurityContext.authenticate(testData.getMary(), "user");
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        AccessManager accessManager = entityManager.unwrap(AccessManager.class);
-        User john = entityManager.getReference(User.class, testData.getJohn().getId());
+        AccessManager accessManager = ENTITY_MANAGER.unwrap(AccessManager.class);
+        User john = ENTITY_MANAGER.getReference(User.class, testData.getJohn().getId());
         assertThat(accessManager.isAccessible(AccessType.READ, john), is(false));
     }
 
     @Test
     public void isJohnAccessibleAsJohn() {
         TestSecurityContext.authenticate(testData.getJohn(), "user");
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        AccessManager accessManager = entityManager.unwrap(AccessManager.class);
-        User john = entityManager.find(User.class, testData.getJohn().getId());
+        AccessManager accessManager = ENTITY_MANAGER.unwrap(AccessManager.class);
+        User john = ENTITY_MANAGER.find(User.class, testData.getJohn().getId());
         assertThat(accessManager.isAccessible(AccessType.READ, john), is(true));
     }
 
     public List<User> getAllUsers() {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
-            entityManager.getTransaction().begin();
-            List<User> users = entityManager.createQuery("SELECT user FROM User user").getResultList();
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.getTransaction().begin();
+            List<User> users = ENTITY_MANAGER.createQuery("SELECT user FROM User user", User.class).getResultList();
+            ENTITY_MANAGER.getTransaction().commit();
             return users;
         } catch (RuntimeException e) {
-            entityManager.getTransaction().rollback();
+            ENTITY_MANAGER.getTransaction().rollback();
             throw e;
         } finally {
-            entityManager.close();
+            ENTITY_MANAGER.close();
         }
     }
 
     public User getUser(String name) {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
-            entityManager.getTransaction().begin();
-            User user = (User)entityManager.createQuery("SELECT user FROM User user WHERE user.name = :name")
-                                           .setParameter("name", name)
-                                           .getSingleResult();
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.getTransaction().begin();
+            User user = ENTITY_MANAGER.createQuery("SELECT user FROM User user WHERE user.name = :name", User.class)
+                    .setParameter("name", name)
+                    .getSingleResult();
+            ENTITY_MANAGER.getTransaction().commit();
             return user;
         } catch (RuntimeException e) {
-            entityManager.getTransaction().rollback();
+            ENTITY_MANAGER.getTransaction().rollback();
             throw e;
         } finally {
-            entityManager.close();
+            ENTITY_MANAGER.close();
         }
     }
 
     public List<Contact> getAllContacts() {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
-            entityManager.getTransaction().begin();
-            List<Contact> contacts = entityManager.createQuery("SELECT contact FROM Contact contact").getResultList();
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.getTransaction().begin();
+            List<Contact> contacts = ENTITY_MANAGER.createQuery("SELECT contact FROM Contact contact", Contact.class)
+                    .getResultList();
+            ENTITY_MANAGER.getTransaction().commit();
             return contacts;
         } catch (RuntimeException e) {
-            if (entityManager.getTransaction().isActive()) {
-                entityManager.getTransaction().rollback();
+            if (ENTITY_MANAGER.getTransaction().isActive()) {
+                ENTITY_MANAGER.getTransaction().rollback();
             }
             throw e;
         } finally {
-            entityManager.close();
+            ENTITY_MANAGER.close();
         }
     }
 }

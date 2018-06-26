@@ -3,10 +3,10 @@
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/orm_2_0.xsd"
                  version="2.0">
-  <named-query name="myQuery1">
-      <query>select test from Contact test</query>
-  </named-query>
-  <named-native-query name="myQuery1Native">
-      <query>select test.id from Contact test</query>
-  </named-native-query>
+    <named-query name="myQuery1">
+        <query>select test from Contact test</query>
+    </named-query>
+    <named-native-query name="myQuery1Native">
+        <query>select test.id from Contact test</query>
+    </named-native-query>
 </entity-mappings>

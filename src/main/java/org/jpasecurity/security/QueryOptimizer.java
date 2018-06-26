@@ -16,129 +16,149 @@
 package org.jpasecurity.security;
 
 import java.util.Map;
-
 import javax.persistence.metamodel.Metamodel;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.jpasecurity.Alias;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
+import org.jpasecurity.jpql.TreeRewriteSupport;
 import org.jpasecurity.jpql.compiler.NotEvaluatableException;
 import org.jpasecurity.jpql.compiler.QueryEvaluationParameters;
 import org.jpasecurity.jpql.compiler.QueryEvaluator;
 import org.jpasecurity.jpql.compiler.QueryPreparator;
-import org.jpasecurity.jpql.parser.JpqlAnd;
-import org.jpasecurity.jpql.parser.JpqlBrackets;
-import org.jpasecurity.jpql.parser.JpqlOr;
+import org.jpasecurity.jpql.parser.JpqlParser;
+import org.jpasecurity.jpql.parser.JpqlParser.LiteralExpressionContext;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
-import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.Node;
 
 /**
  * Optimizes a query by evaluating subtrees in memory.
+ *
  * @author Arne Limburg
  */
 public class QueryOptimizer {
 
-    private final QueryEvaluator evaluator;
-    private final QueryEvaluationParameters parameters;
-    private final NodeOptimizer nodeOptimizer = new NodeOptimizer();
-    private final QueryPreparator queryPreparator = new QueryPreparator();
+    private final NodeOptimizerVisitor nodeOptimizer;
 
-    public QueryOptimizer(Metamodel metamodel,
-                          SecurePersistenceUnitUtil persistenceUnitUtil,
-                          Map<Alias, Object> aliases,
-                          Map<String, Object> namedParameters,
-                          Map<Integer, Object> positionalParameters,
-                          QueryEvaluator evaluator) {
-        this.evaluator = evaluator;
-        this.parameters = new QueryEvaluationParameters(metamodel,
-                                                        persistenceUnitUtil,
-                                                        aliases,
-                                                        namedParameters,
-                                                        positionalParameters,
-                                                        QueryEvaluationParameters.EvaluationType.OPTIMIZE_QUERY);
+     QueryOptimizer(Metamodel metamodel,
+                    SecurePersistenceUnitUtil persistenceUnitUtil,
+                    Map<Alias, Object> aliases,
+                    Map<String, Object> namedParameters,
+                    Map<Integer, Object> positionalParameters,
+                    QueryEvaluator evaluator) {
+        this.nodeOptimizer = new NodeOptimizerVisitor(
+                new QueryEvaluationParameters(
+                        metamodel,
+                        persistenceUnitUtil,
+                        aliases,
+                        namedParameters,
+                        positionalParameters,
+                        QueryEvaluationParameters.EvaluationType.OPTIMIZE_QUERY
+                ),
+                evaluator
+        );
     }
 
     public void optimize(JpqlCompiledStatement compiledStatement) {
         optimize(compiledStatement.getWhereClause());
     }
 
-    public void optimize(Node node) {
-        node.visit(nodeOptimizer, new QueryEvaluationParameters(parameters));
+    public void optimize(ParserRuleContext node) {
+        nodeOptimizer.visit(node);
     }
 
-    private class NodeOptimizer extends JpqlVisitorAdapter<QueryEvaluationParameters> {
+    private static class NodeOptimizerVisitor extends JpqlVisitorAdapter<QueryEvaluationParameters> {
 
-        public boolean visit(JpqlWhere where, QueryEvaluationParameters data) {
-            assert where.jjtGetNumChildren() == 1;
-            try {
-                if (evaluator.<Boolean>evaluate(where.jjtGetChild(0), data)) {
-                    queryPreparator.remove(where);
-                } else {
-                    Node node = queryPreparator.createBoolean(false);
-                    queryPreparator.replace(where.jjtGetChild(0), node);
-                }
-                return true;
-            } catch (NotEvaluatableException e) {
-                return true;
-            }
+        private final QueryPreparator queryPreparator = new QueryPreparator();
+        private final QueryEvaluator evaluator;
+
+        NodeOptimizerVisitor(QueryEvaluationParameters value, QueryEvaluator evaluator) {
+            super(value);
+            this.evaluator = evaluator;
         }
 
-        public boolean visit(JpqlOr node, QueryEvaluationParameters data) {
-            assert node.jjtGetNumChildren() == 2;
+        @Override
+        public QueryEvaluationParameters visitWhereClause(JpqlParser.WhereClauseContext ctx) {
             try {
-                if (evaluator.<Boolean>evaluate(node.jjtGetChild(0), data)) {
-                    queryPreparator.replace(node, queryPreparator.createEquals(queryPreparator.createBoolean(true),
-                                                                               queryPreparator.createBoolean(true)));
+                if (evaluator.evaluate(ctx.predicate(), defaultResult())) {
+                    queryPreparator.remove(ctx);
                 } else {
-                    queryPreparator.replace(node, node.jjtGetChild(1));
+                    ParserRuleContext node = queryPreparator.createBoolean(false);
+                    TreeRewriteSupport.replace(ctx.predicate(), node);
                 }
-                return true;
             } catch (NotEvaluatableException e) {
+                defaultResult().setResult(true);
+            }
+            return defaultResult();
+        }
+
+        @Override
+        public QueryEvaluationParameters visitAndPredicate(JpqlParser.AndPredicateContext ctx) {
+            try {
+                if (evaluator.<Boolean>evaluate(ctx.predicate(0), defaultResult())) {
+                    TreeRewriteSupport.replace(ctx, ctx.predicate(1));
+                } else {
+                    TreeRewriteSupport.replace(ctx.predicate(0), queryPreparator.createBoolean(false));
+                }
+                defaultResult().setResult(true);
+            } catch (NotEvaluatableException nee1) {
                 try {
-                    if (evaluator.<Boolean>evaluate(node.jjtGetChild(1), data)) {
-                        queryPreparator.replace(node,
-                                                queryPreparator.createEquals(queryPreparator.createBoolean(true),
-                                                                             queryPreparator.createBoolean(true)));
+                    if (evaluator.<Boolean>evaluate(ctx.predicate(1), defaultResult())) {
+                        TreeRewriteSupport.replace(ctx, ctx.getChild(0));
                     } else {
-                        queryPreparator.replace(node, node.jjtGetChild(0));
+                        TreeRewriteSupport.replace(ctx.predicate(1), queryPreparator.createBoolean(false));
                     }
-                    return true;
-                } catch (NotEvaluatableException n) {
-                    return true;
+                    defaultResult().setResult(true);
+                } catch (NotEvaluatableException nee2) {
+                    defaultResult().setResult(true);
                 }
             }
+            return defaultResult();
         }
 
-        public boolean visit(JpqlAnd node, QueryEvaluationParameters data) {
-            assert node.jjtGetNumChildren() == 2;
+        @Override
+        public QueryEvaluationParameters visitOrPredicate(JpqlParser.OrPredicateContext ctx) {
             try {
-                if (evaluator.<Boolean>evaluate(node.jjtGetChild(0), data)) {
-                    queryPreparator.replace(node, node.jjtGetChild(1));
+                if (evaluator.<Boolean>evaluate(ctx.predicate(0), defaultResult())) {
+                    TreeRewriteSupport.replace(ctx, QueryPreparator.createOneEqualsOne());
                 } else {
-                    queryPreparator.replace(node, queryPreparator.createBoolean(false));
+                    TreeRewriteSupport.replace(ctx, ctx.predicate(1));
                 }
-                return true;
-            } catch (NotEvaluatableException e) {
+                defaultResult().setResult(true);
+            } catch (NotEvaluatableException nee1) {
                 try {
-                    if (evaluator.<Boolean>evaluate(node.jjtGetChild(1), data)) {
-                        queryPreparator.replace(node, node.jjtGetChild(0));
+                    if (evaluator.<Boolean>evaluate(ctx.predicate(1), defaultResult())) {
+                        TreeRewriteSupport.replace(ctx, QueryPreparator.createOneEqualsOne());
                     } else {
-                        queryPreparator.replace(node, queryPreparator.createBoolean(false));
+                        TreeRewriteSupport.replace(ctx, ctx.predicate(0));
                     }
-                    return true;
-                } catch (NotEvaluatableException n) {
-                    return true;
+                    defaultResult().setResult(true);
+                } catch (NotEvaluatableException nee2) {
+                    defaultResult().setResult(true);
                 }
             }
+            return defaultResult();
         }
 
-        public boolean visit(JpqlBrackets brackets, QueryEvaluationParameters data) {
-            assert brackets.jjtGetNumChildren() == 1;
-            while (brackets.jjtGetChild(0) instanceof JpqlBrackets) {
-                queryPreparator.replace(brackets.jjtGetChild(0), brackets.jjtGetChild(0).jjtGetChild(0));
+        @Override
+        public QueryEvaluationParameters visitGroupedPredicate(JpqlParser.GroupedPredicateContext ctx) {
+            JpqlParser.PredicateContext context = ctx.predicate();
+            while (context instanceof JpqlParser.GroupedPredicateContext) {
+                context = (JpqlParser.PredicateContext)TreeRewriteSupport.replace(ctx.predicate(),
+                        ((JpqlParser.GroupedPredicateContext)ctx.predicate()).predicate());
             }
-            return true;
+            return defaultResult();
+        }
+
+        @Override
+        public QueryEvaluationParameters visitGroupedExpression(JpqlParser.GroupedExpressionContext ctx) {
+            JpqlParser.ExpressionContext context = ctx.expression();
+            while (context instanceof JpqlParser.GroupedExpressionContext) {
+                context = (JpqlParser.ExpressionContext)TreeRewriteSupport.replace(ctx.expression(),
+                        ((JpqlParser.GroupedExpressionContext)ctx.expression()).expression());
+            }
+            return defaultResult();
         }
     }
 }

@@ -22,8 +22,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceException;
@@ -34,16 +32,18 @@ import javax.xml.xpath.XPathExpressionException;
 
 import org.jpasecurity.SecurityContext;
 import org.jpasecurity.security.rules.AccessRulesProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
 public class SecurePersistenceProvider implements PersistenceProvider {
 
-    private static final Logger LOG = Logger.getLogger(SecurePersistenceProvider.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(SecurePersistenceProvider.class.getName());
 
-    public static final String PERSISTENCE_PROVIDER_PROPERTY = "javax.persistence.provider";
-    static final String NATIVE_PERSISTENCE_PROVIDER_PROPERTY = "org.jpasecurity.persistence.provider";
-    static final String SECURITY_CONTEXT_PROPERTY = "org.jpasecurity.security.context";
-    static final String ACCESS_RULES_PROVIDER_PROPERTY = "org.jpasecurity.security.rules.provider";
+    static final String PERSISTENCE_PROVIDER_PROPERTY = "javax.persistence.provider";
+    private static final String NATIVE_PERSISTENCE_PROVIDER_PROPERTY = "org.jpasecurity.persistence.provider";
+    private static final String SECURITY_CONTEXT_PROPERTY = "org.jpasecurity.security.context";
+    private static final String ACCESS_RULES_PROVIDER_PROPERTY = "org.jpasecurity.security.rules.provider";
     private static final String DEFAULT_ORM_XML_LOCATION = "META-INF/orm.xml";
     private static final String DEFAULT_SECURITY_CONTEXT_PROPERTY
         = "org.jpasecurity.security.authentication.AutodetectingSecurityContext";
@@ -63,7 +63,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         }
         EntityManagerFactory nativeFactory
             = nativePersistenceProvider.createContainerEntityManagerFactory(unitInfo, properties);
-        List<String> ormXmlLocations = new ArrayList<String>(unitInfo.getMappingFileNames());
+        List<String> ormXmlLocations = new ArrayList<>(unitInfo.getMappingFileNames());
         ormXmlLocations.add(DEFAULT_ORM_XML_LOCATION);
         Class<? extends SecurityContext> securityContextType = createSecurityContextType(unitInfo, properties);
         Class<? extends AccessRulesProvider> accessRulesProviderType
@@ -88,7 +88,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
                 = Thread.currentThread().getContextClassLoader().getResources("META-INF/persistence.xml");
             xmlParser = new XmlParser(Collections.list(persistenceXmls));
         } catch (Exception e) {
-            LOG.log(Level.WARNING, "Could not initialize xml parser", e);
+            LOG.warn("Could not initialize xml parser", e);
             return null;
         }
         PersistenceProvider nativePersistenceProvider
@@ -99,7 +99,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         try {
             EntityManagerFactory nativeFactory
                 = nativePersistenceProvider.createEntityManagerFactory(unitName, properties);
-            List<String> ormXmlLocations = new ArrayList<String>(xmlParser.parseMappingFileNames(unitName));
+            List<String> ormXmlLocations = new ArrayList<>(xmlParser.parseMappingFileNames(unitName));
             ormXmlLocations.add(DEFAULT_ORM_XML_LOCATION);
             Class<? extends SecurityContext> securityContextType
                 = createSecurityContextType(unitName, properties, xmlParser);
@@ -111,11 +111,12 @@ public class SecurePersistenceProvider implements PersistenceProvider {
                                                   securityContextType,
                                                   accessRulesProviderType);
         } catch (XPathExpressionException e) {
-            LOG.log(Level.WARNING, "Could not parse mapping files", e);
+            LOG.warn("Could not parse mapping files", e);
             return null;
         }
     }
 
+    @Override
     public void generateSchema(PersistenceUnitInfo unitInfo, Map properties) {
         if (properties == null) {
             properties = new HashMap();
@@ -129,6 +130,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         nativePersistenceProvider.generateSchema(unitInfo, properties);
     }
 
+    @Override
     public boolean generateSchema(String unitName, Map properties) {
         if (properties == null) {
             properties = new HashMap();
@@ -296,7 +298,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             Class<?> persistenceProviderClass
                 = getClassLoader(persistenceUnitInfo).loadClass(nativePersistenceProviderClassName);
             properties.put(PERSISTENCE_PROVIDER_PROPERTY, nativePersistenceProviderClassName);
-            return (PersistenceProvider)persistenceProviderClass.newInstance();
+            return (PersistenceProvider)persistenceProviderClass.getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }
@@ -309,13 +311,15 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             XmlParser parser = new XmlParser(Collections.list(persistenceXmls));
             return createNativePersistenceProvider(unitName, properties, parser);
         } catch (Exception e) {
-            LOG.log(Level.WARNING, "Could not initialize xml parser", e);
+            LOG.warn("Could not initialize xml parser", e);
             return null;
         }
     }
 
-    private PersistenceProvider createNativePersistenceProvider(String unitName, Map properties, XmlParser xmlParser) {
-        String overriddenPersistenceProviderClassName = (String)properties.get(PERSISTENCE_PROVIDER_PROPERTY);
+    private PersistenceProvider createNativePersistenceProvider(String unitName,
+                                                                Map<String, String> properties,
+                                                                XmlParser xmlParser) {
+        String overriddenPersistenceProviderClassName = properties.get(PERSISTENCE_PROVIDER_PROPERTY);
         if (isOtherPersistenceProvider(overriddenPersistenceProviderClassName)) {
             return null;
         }
@@ -343,7 +347,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             }
             Class<?> persistenceProviderClass
                 = Thread.currentThread().getContextClassLoader().loadClass(persistenceProviderClassName);
-            return (PersistenceProvider)persistenceProviderClass.newInstance();
+            return (PersistenceProvider)persistenceProviderClass.getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }

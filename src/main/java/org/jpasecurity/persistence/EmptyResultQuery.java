@@ -17,17 +17,17 @@ package org.jpasecurity.persistence;
 
 import java.util.Collections;
 import java.util.List;
-
 import javax.persistence.NoResultException;
 import javax.persistence.Query;
 
 /**
  * An implementation of the {@link Query} interface that returns always an empty result.
+ *
  * @author Arne Limburg
  */
 public class EmptyResultQuery<T> extends DelegatingQuery<T> {
 
-    public EmptyResultQuery(Query delegate) {
+    EmptyResultQuery(Query delegate) {
         super(delegate);
     }
 
@@ -35,6 +35,7 @@ public class EmptyResultQuery<T> extends DelegatingQuery<T> {
      * As this query always returns an empty result,
      * this call always throws a {@link NoResultException}
      */
+    @Override
     public T getSingleResult() {
         throw new NoResultException();
     }
@@ -42,7 +43,8 @@ public class EmptyResultQuery<T> extends DelegatingQuery<T> {
     /**
      * As this query always returns an empty result, this call always returns an empty list.
      */
+    @Override
     public List<T> getResultList() {
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 }

@@ -29,7 +29,7 @@ import org.junit.Test;
  */
 public class JpqlQueryParserTest {
 
-    public static final String USER1 = "user1";
+    private static final String USER1 = "user1";
 
     @Test
     public void count() {

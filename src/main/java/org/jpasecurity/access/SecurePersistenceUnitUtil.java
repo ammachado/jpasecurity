@@ -29,8 +29,8 @@ import org.jpasecurity.util.ReflectionUtils;
  */
 public class SecurePersistenceUnitUtil implements PersistenceUnitUtil {
 
-    private PersistenceUnitUtil persistenceUnitUtil;
-    private ProviderUtil providerUtil;
+    private final PersistenceUnitUtil persistenceUnitUtil;
+    private final ProviderUtil providerUtil;
 
     public SecurePersistenceUnitUtil(PersistenceUnitUtil util) {
         persistenceUnitUtil = notNull(PersistenceUnitUtil.class, util);
@@ -54,7 +54,7 @@ public class SecurePersistenceUnitUtil implements PersistenceUnitUtil {
 
     public <T> T initialize(T bean) {
         if (!persistenceUnitUtil.isLoaded(bean)) {
-            bean.toString();
+            String dummy = bean.toString();
         }
         return providerUtil.unproxy(bean);
     }

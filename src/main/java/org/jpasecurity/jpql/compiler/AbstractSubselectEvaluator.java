@@ -17,36 +17,35 @@ package org.jpasecurity.jpql.compiler;
 
 import java.util.Collection;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
-import org.jpasecurity.jpql.parser.JpqlHint;
-import org.jpasecurity.jpql.parser.JpqlSelectClause;
-import org.jpasecurity.jpql.parser.Node;
-import org.jpasecurity.jpql.parser.SimpleNode;
+import org.jpasecurity.jpql.parser.JpqlParser;
 
 /**
  * @author Arne Limburg
  */
-public abstract class AbstractSubselectEvaluator implements SubselectEvaluator {
+public abstract class AbstractSubselectEvaluator implements SubQueryEvaluator {
 
     protected QueryEvaluator evaluator;
 
+    @Override
     public void setQueryEvaluator(QueryEvaluator evaluator) {
         this.evaluator = evaluator;
     }
 
-    public Collection<?> evaluate(JpqlCompiledStatement subselect,
+    @Override
+    public Collection<?> evaluate(JpqlCompiledStatement subQuery,
                                   QueryEvaluationParameters parameters) throws NotEvaluatableException {
         parameters.setResultUndefined();
         throw new NotEvaluatableException(getClass().getSimpleName() + " cannot evaluate subselects");
     }
 
-    protected boolean isEvaluationDisabledByHint(Node node, Class<? extends SimpleNode> hintType) {
-        final Node possibleSelect = node.jjtGetChild(0);
-        if (possibleSelect instanceof JpqlSelectClause) {
-            final Node possibleHint = possibleSelect.jjtGetChild(0);
-            if (possibleHint instanceof JpqlHint) {
-                for (int i = 0; i < possibleHint.jjtGetNumChildren(); i++) {
-                    if (hintType.isAssignableFrom(possibleHint.jjtGetChild(i).getClass())) {
+    protected boolean isEvaluationDisabledByHint(ParserRuleContext node, Class<? extends ParserRuleContext> hintType) {
+        if (node instanceof JpqlParser.SelectClauseContext) {
+            final ParserRuleContext possibleHint = ((JpqlParser.SelectClauseContext)node).hintStatement();
+            if (possibleHint != null) {
+                for (int i = 0; i < possibleHint.getChildCount(); i++) {
+                    if (hintType.isAssignableFrom(possibleHint.getChild(i).getClass())) {
                         return true;
                     }
                 }

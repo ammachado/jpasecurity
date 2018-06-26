@@ -16,19 +16,13 @@
 package org.jpasecurity.persistence;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.persistence.EntityManager;
-import javax.persistence.FlushModeType;
-import javax.persistence.Query;
 
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
-import org.jpasecurity.access.DefaultAccessManager;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
 import org.jpasecurity.jpql.TypeDefinition;
 import org.jpasecurity.jpql.compiler.AbstractSubselectEvaluator;
@@ -36,14 +30,12 @@ import org.jpasecurity.jpql.compiler.NotEvaluatableException;
 import org.jpasecurity.jpql.compiler.PathEvaluator;
 import org.jpasecurity.jpql.compiler.QueryEvaluationParameters;
 import org.jpasecurity.jpql.compiler.QueryPreparator;
-import org.jpasecurity.jpql.parser.JpqlNoDbIsAccessible;
-import org.jpasecurity.jpql.parser.JpqlPath;
-import org.jpasecurity.jpql.parser.JpqlSubselect;
+import org.jpasecurity.jpql.parser.JpqlParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class evaluates JPQL subselect-queries via a call to a specified <tt>EntityManager</tt>.
+ * This class evaluates JPQL subselect-queries via a call to a specified {@link EntityManager}.
  * @author Arne Limburg
  */
 public class EntityManagerEvaluator extends AbstractSubselectEvaluator {
@@ -65,26 +57,34 @@ public class EntityManagerEvaluator extends AbstractSubselectEvaluator {
 
     /**
      * Within this method a query is performed via the entity-manager of this evaluator.
-     * If this evaluator is already closed, the result of the evaluation is set to <quote>undefined</quote>.
+     * If this evaluator is already closed, the result of the evaluation is set to <tt>undefined</tt>.
      */
-    public Collection<?> evaluate(JpqlCompiledStatement statement,
-                                  QueryEvaluationParameters evaluationParameters) throws NotEvaluatableException {
+    @Override
+    public Collection<?> evaluate(JpqlCompiledStatement subQuery,
+                                  QueryEvaluationParameters parameters) throws NotEvaluatableException {
+        throw new UnsupportedOperationException(
+                "Collection<?> evaluate(JpqlCompiledStatement, QueryEvaluationParameters)"
+        );
+        /*
         if (!isEntityManagerOpen()) {
             evaluationParameters.setResultUndefined();
-            throw new NotEvaluatableException("No open EntityManage available");
+            throw new NotEvaluatableException("No open EntityManager available");
         }
-        if (isDisabledByHint((JpqlSubselect)statement.getStatement(), evaluationParameters)) {
+        if (isDisabledByHint((JpqlParser.SubQueryExpressionContext)statement.getStatement(), evaluationParameters)) {
             evaluationParameters.setResultUndefined();
             throw new NotEvaluatableException(
                 "EntityManagerEvaluator is disabled by IS_ACCESSIBLE_NODB hint in mode " + evaluationParameters
                     .getEvaluationType());
         }
         LOG.trace("Evaluating subselect with query");
+        throw new UnsupportedOperationException(
+               "Collection<?> evaluate(JpqlCompiledStatement, QueryEvaluationParameters) throws NotEvaluatableException"
+        );
         statement = statement.clone();
         Set<Alias> aliases = getAliases(statement.getTypeDefinitions());
-        Set<String> namedParameters = new HashSet<String>(statement.getNamedParameters());
-        Map<String, String> namedPathParameters = new HashMap<String, String>();
-        Map<String, Object> namedParameterValues = new HashMap<String, Object>();
+        Set<String> namedParameters = new HashSet<>(statement.getNamedParameters());
+        Map<String, String> namedPathParameters = new HashMap<>();
+        Map<String, Object> namedParameterValues = new HashMap<>();
         for (JpqlPath jpqlPath: statement.getWhereClausePaths()) {
             Path path = new Path(jpqlPath.toString());
             Alias alias = path.getRootAlias();
@@ -98,8 +98,8 @@ public class EntityManagerEvaluator extends AbstractSubselectEvaluator {
                 queryPreparator.replace(jpqlPath, queryPreparator.createNamedParameter(namedParameter));
             }
         }
-        String queryString = ((JpqlSubselect)statement.getStatement()).toJpqlString();
-        LOG.info("executing query " + queryString);
+        String queryString = statement.getStatement().toString();
+        LOG.info("executing query {}", queryString);
         try {
             Query query = entityManager.createQuery(queryString);
             for (String namedParameter: statement.getNamedParameters()) {
@@ -118,15 +118,17 @@ public class EntityManagerEvaluator extends AbstractSubselectEvaluator {
             evaluationParameters.setResultUndefined();
             throw new NotEvaluatableException(e);
         }
+        */
     }
 
-    public boolean canEvaluate(JpqlSubselect node, QueryEvaluationParameters parameters) {
-        return isEntityManagerOpen()
-            && !isDisabledByHint(node, parameters);
+    @Override
+    public boolean canEvaluate(JpqlParser.SubQueryContext node, QueryEvaluationParameters parameters) {
+        return isEntityManagerOpen() && !isDisabledByHint(node, parameters);
     }
 
-    private boolean isDisabledByHint(JpqlSubselect node, QueryEvaluationParameters parameters) {
-        return !(isAccessCheck(parameters) && !isEvaluationDisabledByHint(node, JpqlNoDbIsAccessible.class));
+    private boolean isDisabledByHint(JpqlParser.SubQueryContext node, QueryEvaluationParameters parameters) {
+        return !isAccessCheck(parameters)
+                && !isEvaluationDisabledByHint(node, JpqlParser.NoDbIsAccessibleContext.class);
     }
 
     private boolean isEntityManagerOpen() {
@@ -143,7 +145,7 @@ public class EntityManagerEvaluator extends AbstractSubselectEvaluator {
     }
 
     private Set<Alias> getAliases(Set<TypeDefinition> typeDefinitions) {
-        Set<Alias> aliases = new HashSet<Alias>();
+        Set<Alias> aliases = new HashSet<>();
         for (TypeDefinition typeDefinition: typeDefinitions) {
             if (typeDefinition.getAlias() != null) {
                 aliases.add(typeDefinition.getAlias());

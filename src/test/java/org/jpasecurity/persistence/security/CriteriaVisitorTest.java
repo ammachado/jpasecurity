@@ -32,51 +32,51 @@ import javax.persistence.criteria.Root;
 import javax.persistence.metamodel.EntityType;
 import javax.persistence.metamodel.Metamodel;
 
-import org.jpasecurity.SecurityContext;
 import org.jpasecurity.access.DefaultAccessManager;
-import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.ParseException;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.model.TestBean;
 import org.jpasecurity.security.AccessRule;
 import org.jpasecurity.security.rules.AccessRulesCompiler;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 
 /**
  * @author Arne Limburg
  */
 public class CriteriaVisitorTest {
 
-    private Metamodel metamodel;
-    private SecurityContext securityContext;
+    @Rule
+    public final MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
+
+    @Mock
     private DefaultAccessManager accessManager;
-    private JpqlParser parser;
+
+    @Mock
+    private Metamodel metamodel;
+
     private AccessRulesCompiler compiler;
-    private CriteriaVisitor criteriaVisitor;
     private EntityManagerFactory entityManagerFactory;
-    private TestBean bean1;
-    private TestBean bean2;
 
     @Before
     public void initialize() {
-        metamodel = mock(Metamodel.class);
         EntityType testBeanType = mock(EntityType.class);
         when(metamodel.getEntities()).thenReturn(Collections.<EntityType<?>>singleton(testBeanType));
         when(testBeanType.getName()).thenReturn(TestBean.class.getSimpleName());
         when(testBeanType.getJavaType()).thenReturn(TestBean.class);
-        securityContext = mock(SecurityContext.class);
-        accessManager = mock(DefaultAccessManager.class);
         DefaultAccessManager.Instance.register(accessManager);
 
-        parser = new JpqlParser();
         compiler = new AccessRulesCompiler(metamodel);
         entityManagerFactory = Persistence.createEntityManagerFactory("hibernate");
-        criteriaVisitor = new CriteriaVisitor(metamodel, entityManagerFactory.getCriteriaBuilder());
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
-        bean1 = new TestBean();
-        bean2 = new TestBean();
+        TestBean bean1 = new TestBean();
+        TestBean bean2 = new TestBean();
         entityManager.persist(bean1);
         entityManager.persist(bean2);
         entityManager.getTransaction().commit();
@@ -97,20 +97,21 @@ public class CriteriaVisitorTest {
         Root<TestBean> from = query.from(TestBean.class);
         from.alias("testBean");
         query.where(from.get("parent").isNull());
-
-        accessRule.getWhereClause().visit(criteriaVisitor, new CriteriaHolder(query));
+        CriteriaHolder criteriaHolder = new CriteriaHolder(query);
+        CriteriaVisitor criteriaVisitor = new CriteriaVisitor(
+                metamodel,
+                entityManagerFactory.getCriteriaBuilder(),
+                criteriaHolder
+        );
+        criteriaVisitor.visit(accessRule.getWhereClause());
         List<TestBean> result = entityManager.createQuery(query).getResultList();
         assertEquals(1, result.size());
         assertEquals(1, result.iterator().next().getId());
     }
 
     private AccessRule compile(String accessRule) {
-        try {
-            Collection<AccessRule> accessRules = compiler.compile(parser.parseRule(accessRule));
-            assertEquals(1, accessRules.size());
-            return accessRules.iterator().next();
-        } catch (ParseException e) {
-            throw new IllegalArgumentException(accessRule, e);
-        }
+        Collection<AccessRule> accessRules = compiler.compile(JpqlParsingHelper.parseAccessRule(accessRule));
+        assertEquals(1, accessRules.size());
+        return accessRules.iterator().next();
     }
 }

@@ -32,6 +32,7 @@ public class DefaultSecureCollection<E, T extends Collection<E>> extends Abstrac
         super(target, filtered);
     }
 
+    @Override
     protected T createFiltered() {
         return (T)new ArrayList<E>();
     }

@@ -29,7 +29,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/** @author Stefan Hildebrandt */
+/**
+ * @author Stefan Hildebrandt
+ */
 public class JoiningQueryTest {
 
     public static final String USER = "user";
@@ -113,4 +115,3 @@ public class JoiningQueryTest {
         entityManager.close();
     }
 }
-

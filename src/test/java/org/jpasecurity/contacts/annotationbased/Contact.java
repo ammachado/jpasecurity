@@ -34,7 +34,7 @@ import org.jpasecurity.security.PermitAny;
 @Entity
 @NamedQuery(name = Contact.FIND_ALL, query = "SELECT contact FROM Contact contact")
 @PermitAny({
-    @Permit(access = { AccessType.CREATE, AccessType.READ }, where = "'admin' IN CURRENT_ROLES"),
+    @Permit(access = { AccessType.CREATE, AccessType.READ }, where = "'admin' IN (CURRENT_ROLES)"),
     @Permit(access = AccessType.READ, where = "EXISTS (SELECT contact FROM Contact contact "
             + "WHERE this = contact AND (contact.owner = CURRENT_PRINCIPAL OR contact.owner = 'public'))")
     })
@@ -81,10 +81,12 @@ public class Contact implements Serializable {
         this.text = text;
     }
 
+    @Override
     public String toString() {
         return getText();
     }
 
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof Contact)) {
             return false;
@@ -99,6 +101,7 @@ public class Contact implements Serializable {
         }
     }
 
+    @Override
     public int hashCode() {
         return getId() == null? System.identityHashCode(this): getId().hashCode();
     }

@@ -16,7 +16,6 @@
 package org.jpasecurity.collection;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -37,16 +36,17 @@ import org.jpasecurity.model.SimpleEmbeddable;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.jpasecurity.util.ReflectionUtils;
 import org.junit.After;
-import org.junit.Ignore;
+import org.junit.Assert;
 import org.junit.Test;
+import org.springframework.util.CollectionUtils;
 
 /**
  * @author Arne Limburg
  */
 public class PropertyAccessTest {
 
-    public static final String USER1 = "user1";
-    public static final String USER2 = "user2";
+    private static final String USER1 = "user1";
+    private static final String USER2 = "user2";
     private static final String ADMIN = "admin";
 
     @Test
@@ -76,12 +76,11 @@ public class PropertyAccessTest {
             = entityManager.createNamedQuery("findEmbeddableById", SimpleEmbeddable.class)
                 .setParameter("id", inaccessibleBean.getIdentifier())
                 .getResultList();
-        assertThat(emptyResult, hasSize(0));
+        assertTrue(CollectionUtils.isEmpty(emptyResult));
         entityManager.close();
         factory.close();
     }
 
-    @Ignore
     @Test
     public void navigateOneToMany() {
         TestSecurityContext.authenticate(ADMIN, ADMIN);
@@ -107,7 +106,6 @@ public class PropertyAccessTest {
         factory.close();
     }
 
-    @Ignore
     @Test
     public void methodBasedMapping() {
         TestSecurityContext.authenticate(ADMIN, ADMIN);
@@ -125,7 +123,7 @@ public class PropertyAccessTest {
         final MethodAccessAnnotationTestBean bean2
             = entityManager2.find(MethodAccessAnnotationTestBean.class, bean.getId());
         for (MethodAccessAnnotationTestBean methodAccessAnnotationTestBean: bean2.getChildren()) {
-            methodAccessAnnotationTestBean.getId();
+            Assert.assertNotEquals(0, methodAccessAnnotationTestBean.getId());
         }
         entityManager2.getTransaction().commit();
     }
@@ -184,7 +182,6 @@ public class PropertyAccessTest {
         entityManager3.close();
     }
 
-    @Ignore
     @Test
     public void update() {
         TestSecurityContext.authenticate(USER1);
@@ -240,7 +237,6 @@ public class PropertyAccessTest {
         assertEquals(USER2, bean.getBeanName());
     }
 
-    @Ignore
     @Test
     public void fieldBasedPropertyAccessCount() {
         TestSecurityContext.authenticate(USER1);
@@ -273,7 +269,6 @@ public class PropertyAccessTest {
         entityManager.close();
     }
 
-    @Ignore
     @Test
     public void methodBasedPropertyAccessCount() {
         TestSecurityContext.authenticate(USER1);

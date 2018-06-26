@@ -15,13 +15,10 @@
  */
 package org.jpasecurity.persistence.security;
 
-import static java.util.Collections.singleton;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,47 +47,42 @@ import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
-import org.jpasecurity.jpql.compiler.SubselectEvaluator;
+import org.jpasecurity.jpql.compiler.SubQueryEvaluator;
 import org.jpasecurity.security.AccessRule;
 import org.jpasecurity.security.EntityFilter;
 import org.jpasecurity.security.FilterResult;
 import org.jpasecurity.util.Types;
 
 /**
- * This class extends {@link EntityFilter} by the ability to filter
- * @link {@link CriteriaQuery}s.
+ * This class extends {@link EntityFilter} by the ability to filter {@link CriteriaQuery criteria queries}.
  *
  * @author Arne Limburg
  */
 public class CriteriaEntityFilter extends EntityFilter {
 
-    private final CriteriaVisitor criteriaVisitor;
+    private final Metamodel metamodel;
+    private final CriteriaBuilder criteriaBuilder;
 
     public CriteriaEntityFilter(Metamodel metamodel,
                                 SecurePersistenceUnitUtil util,
                                 CriteriaBuilder criteriaBuilder,
                                 Collection<AccessRule> accessRules,
-                                SubselectEvaluator... evaluators) {
+                                SubQueryEvaluator... evaluators) {
         super(metamodel, util, accessRules, evaluators);
-        criteriaVisitor = new CriteriaVisitor(metamodel, criteriaBuilder);
+        this.metamodel = metamodel;
+        this.criteriaBuilder = criteriaBuilder;
     }
 
     public <R> FilterResult<CriteriaQuery<R>> filterQuery(CriteriaQuery<R> query) {
         Selection<R> selection = query.getSelection();
-        Map<Path, Class<?>> selectedTypes = new HashMap<Path, Class<?>>();
+        Map<Path, Class<?>> selectedTypes = new HashMap<>();
         if (selection == null) {
             for (Root<?> selectedRoot: query.getRoots()) {
                 if (selectedRoot.getAlias() != null) {
                     selectedTypes.put(new Path(selectedRoot.getAlias()), selectedRoot.getJavaType());
                 }
             }
-        } else if (!selection.isCompoundSelection()) {
-            Path path = getSelectedPath(0, selection);
-            Class<?> selectedType = getSelectedType(selection);
-            if (!Types.isSimplePropertyType(selectedType)) {
-                selectedTypes.put(path, selectedType);
-            }
-        } else {
+        } else if (selection.isCompoundSelection()) {
             List<Selection<?>> compoundSelectionItems = selection.getCompoundSelectionItems();
             for (int i = 0; i < compoundSelectionItems.size(); i++) {
                 Selection<?> s = compoundSelectionItems.get(i);
@@ -100,12 +92,17 @@ public class CriteriaEntityFilter extends EntityFilter {
                     selectedTypes.put(path, selectedType);
                 }
             }
+        } else {
+            Path path = getSelectedPath(0, selection);
+            Class<?> selectedType = getSelectedType(selection);
+            if (!Types.isSimplePropertyType(selectedType)) {
+                selectedTypes.put(path, selectedType);
+            }
         }
         if (selectedTypes.isEmpty()) {
-            Iterator<Root<?>> rootIterator = query.getRoots().iterator();
-            for (int i = 0; i < query.getRoots().size(); i++) {
-                Root<?> root = rootIterator.next();
-                String alias = "alias" + i;
+            int i = 0;
+            for (Root<?> root : query.getRoots()) {
+                String alias = "alias" + i++;
                 root.alias(alias);
                 selectedTypes.put(new Path(alias), root.getJavaType());
             }
@@ -122,9 +119,10 @@ public class CriteriaEntityFilter extends EntityFilter {
         parameters.keySet().retainAll(parameterNames);
 
         CriteriaHolder criteriaHolder = new CriteriaHolder(query);
-        getQueryPreparator().createWhere(accessDefinition.getAccessRules()).visit(criteriaVisitor, criteriaHolder);
-        return new CriteriaFilterResult<CriteriaQuery<R>>(
-                query, parameters.size() > 0? parameters: null, query.getResultType(), criteriaHolder.getParameters());
+        new CriteriaVisitor(this.metamodel, this.criteriaBuilder, criteriaHolder)
+                .visit(getQueryPreparator().createWhere(accessDefinition.getAccessRules()));
+        return new CriteriaFilterResult<>(query, parameters.size() > 0
+                ? parameters : null, query.getResultType(), criteriaHolder.getParameters());
     }
 
     public FilterResult<CriteriaUpdate> filterQuery(CriteriaUpdate query) {
@@ -136,13 +134,11 @@ public class CriteriaEntityFilter extends EntityFilter {
     }
 
     private <Q extends CommonAbstractCriteria> FilterResult<Q> filterQuery(Q query, Root<?> root) {
-        Map<Path, Class<?>> selectedTypes = new HashMap<Path, Class<?>>();
+        Map<Path, Class<?>> selectedTypes = new HashMap<>();
         Path path = getSelectedPath(0, root);
         selectedTypes.put(path, root.getJavaType());
-        AccessDefinition accessDefinition = createAccessDefinition(
-                selectedTypes,
-                AccessType.READ,
-                root.getAlias() != null? singleton(new Alias(root.getAlias())): Collections.<Alias>emptySet());
+        AccessDefinition accessDefinition = createAccessDefinition(selectedTypes, AccessType.READ, root.getAlias()
+                != null? Collections.singleton(new Alias(root.getAlias())): Collections.<Alias>emptySet());
         FilterResult<Q> filterResult
             = getAlwaysEvaluatableResult(new JpqlCompiledStatement(null), query, accessDefinition);
         if (filterResult != null) {
@@ -154,13 +150,14 @@ public class CriteriaEntityFilter extends EntityFilter {
         parameters.keySet().retainAll(parameterNames);
 
         CriteriaHolder criteriaHolder = new CriteriaHolder(query);
-        getQueryPreparator().createWhere(accessDefinition.getAccessRules()).visit(criteriaVisitor, criteriaHolder);
-        return new CriteriaFilterResult<Q>(
-                query, parameters.size() > 0? parameters: null, criteriaHolder.getParameters());
+        new CriteriaVisitor(this.metamodel, this.criteriaBuilder, criteriaHolder)
+                .visit(getQueryPreparator().createWhere(accessDefinition.getAccessRules()));
+        return new CriteriaFilterResult<>(
+                query, parameters.size() > 0 ? parameters : null, criteriaHolder.getParameters());
     }
 
     private Set<Alias> getAliases(AbstractQuery<?> query) {
-        Set<Alias> aliases = new HashSet<Alias>();
+        Set<Alias> aliases = new HashSet<>();
         for (Root<?> root: query.getRoots()) {
             if (root.getAlias() != null) {
                 aliases.add(new Alias(root.getAlias()));
@@ -235,7 +232,8 @@ public class CriteriaEntityFilter extends EntityFilter {
         } else if (bindable.getBindableType() == BindableType.PLURAL_ATTRIBUTE) {
             PluralAttribute<?, ?, ?> attribute = (PluralAttribute<?, ?, ?>)bindable;
             return attribute.getElementType();
-        } else { //bindable.getBindableType == BindableType.ENTITY_TYPE
+        } else {
+            //bindable.getBindableType == BindableType.ENTITY_TYPE
             return (EntityType<?>)bindable;
         }
     }

@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import javax.persistence.PersistenceException;
 import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.EntityType;
@@ -29,306 +28,432 @@ import javax.persistence.metamodel.ManagedType;
 import javax.persistence.metamodel.MapAttribute;
 import javax.persistence.metamodel.Metamodel;
 
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
+import org.jpasecurity.jpql.BaseContext;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
+import org.jpasecurity.jpql.TreeRewriteSupport;
+import org.jpasecurity.jpql.Trees;
 import org.jpasecurity.jpql.TypeDefinition;
-import org.jpasecurity.jpql.parser.JpqlCase;
-import org.jpasecurity.jpql.parser.JpqlClassName;
-import org.jpasecurity.jpql.parser.JpqlCoalesce;
-import org.jpasecurity.jpql.parser.JpqlConstructorParameter;
-import org.jpasecurity.jpql.parser.JpqlCount;
-import org.jpasecurity.jpql.parser.JpqlEntry;
-import org.jpasecurity.jpql.parser.JpqlFromItem;
-import org.jpasecurity.jpql.parser.JpqlIdentificationVariable;
-import org.jpasecurity.jpql.parser.JpqlInCollection;
-import org.jpasecurity.jpql.parser.JpqlInnerFetchJoin;
-import org.jpasecurity.jpql.parser.JpqlInnerJoin;
-import org.jpasecurity.jpql.parser.JpqlNamedInputParameter;
-import org.jpasecurity.jpql.parser.JpqlNullif;
-import org.jpasecurity.jpql.parser.JpqlOuterFetchJoin;
-import org.jpasecurity.jpql.parser.JpqlOuterJoin;
-import org.jpasecurity.jpql.parser.JpqlPath;
-import org.jpasecurity.jpql.parser.JpqlPositionalInputParameter;
-import org.jpasecurity.jpql.parser.JpqlSelectExpression;
-import org.jpasecurity.jpql.parser.JpqlStatement;
-import org.jpasecurity.jpql.parser.JpqlSubselect;
+import org.jpasecurity.jpql.parser.JpqlParser;
+import org.jpasecurity.jpql.parser.JpqlParser.CollectionValuePathRootContext;
+import org.jpasecurity.jpql.parser.JpqlParser.MainEntityPersisterReferenceContext;
+import org.jpasecurity.jpql.parser.JpqlParser.MapEntryPathContext;
+import org.jpasecurity.jpql.parser.JpqlParser.MapKeyPathRootContext;
+import org.jpasecurity.jpql.parser.JpqlValueHolderVisitor;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
-import org.jpasecurity.jpql.parser.JpqlWhen;
-import org.jpasecurity.jpql.parser.Node;
 import org.jpasecurity.persistence.mapping.ManagedTypeFilter;
 import org.jpasecurity.util.ValueHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Compiles a {@link JpqlStatement} into a {@link JpqlCompiledStatement}.
+ * Compiles a {@link JpqlParser.StatementContext} into a {@link JpqlCompiledStatement}.
+ *
  * @author Arne Limburg
  */
 public class JpqlCompiler {
 
+    private static final Logger LOG = LoggerFactory.getLogger(JpqlCompiler.class);
+
     private final Metamodel metamodel;
-    private final ConstructorArgReturnTypeVisitor returnTypeVisitor = new ConstructorArgReturnTypeVisitor();
-    private final SelectVisitor selectVisitor = new SelectVisitor();
-    private final AliasVisitor aliasVisitor = new AliasVisitor();
-    private final CountVisitor countVisitor = new CountVisitor();
-    private final PathVisitor pathVisitor = new PathVisitor();
-    private final NamedParameterVisitor namedParameterVisitor = new NamedParameterVisitor();
-    private final PositionalParameterVisitor positionalParameterVisitor = new PositionalParameterVisitor();
 
     public JpqlCompiler(Metamodel metamodel) {
         this.metamodel = metamodel;
     }
 
-    public JpqlCompiledStatement compile(JpqlStatement statement) {
-        return compile((Node)statement);
+    public JpqlCompiledStatement compile(JpqlParser.StatementContext statement) {
+        return compile((BaseContext)statement);
     }
 
-    public JpqlCompiledStatement compile(JpqlSubselect statement) {
-        return compile((Node)statement);
+    public JpqlCompiledStatement compile(JpqlParser.SubQueryContext statement) {
+        return compile((BaseContext)statement);
     }
 
-    private JpqlCompiledStatement compile(Node statement) {
+    private JpqlCompiledStatement compile(BaseContext statement) {
         Class<?> constructorArgReturnType = getConstructorArgReturnType(statement);
         List<Path> selectedPathes = getSelectedPaths(statement);
         Set<TypeDefinition> typeDefinitions = getAliasDefinitions(statement);
         Set<String> namedParameters = getNamedParameters(statement);
         return new JpqlCompiledStatement(statement,
-                                         constructorArgReturnType,
-                                         selectedPathes,
-                                         typeDefinitions,
-                                         namedParameters);
+                constructorArgReturnType,
+                selectedPathes,
+                typeDefinitions,
+                namedParameters);
     }
 
-    public Class<?> getConstructorArgReturnType(Node node) {
+    public Class<?> getConstructorArgReturnType(BaseContext node) {
         if (node == null) {
             return null;
         }
-        ValueHolder<Class<?>> constructorArgReturnTypeHolder = new ValueHolder<Class<?>>();
-        node.visit(returnTypeVisitor, constructorArgReturnTypeHolder);
-        return constructorArgReturnTypeHolder.getValue();
+        return new ConstructorArgReturnTypeVisitor(metamodel).visit(node).getValue();
     }
 
-    public List<Path> getSelectedPaths(Node node) {
+    public List<Path> getSelectedPaths(BaseContext node) {
         if (node == null) {
             return Collections.emptyList();
         }
-        List<Path> selectedPaths = new ArrayList<Path>();
-        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-            node.jjtGetChild(i).visit(selectVisitor, selectedPaths);
+        final List<Path> selectedPaths = new ArrayList<>();
+        final SelectVisitor selectVisitor = new SelectVisitor(selectedPaths);
+        for (int i = 0; i < node.getChildCount(); i++) {
+            selectVisitor.visit(node.getChild(i));
         }
         return Collections.unmodifiableList(selectedPaths);
     }
 
-    public Set<TypeDefinition> getAliasDefinitions(Node node) {
+    public Set<TypeDefinition> getAliasDefinitions(BaseContext node) {
         if (node == null) {
             return Collections.emptySet();
         }
-        Set<TypeDefinition> typeDefinitions = new HashSet<TypeDefinition>();
-        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-            node.jjtGetChild(i).visit(aliasVisitor, typeDefinitions);
+        final Set<TypeDefinition> typeDefinitions = new HashSet<>();
+        final AliasVisitor aliasVisitor = new AliasVisitor(typeDefinitions, metamodel);
+        for (int i = 0; i < node.getChildCount(); i++) {
+            aliasVisitor.visit(node.getChild(i));
         }
         return Collections.unmodifiableSet(typeDefinitions);
     }
 
-    public Set<String> getNamedParameters(Node node) {
+    public Set<String> getNamedParameters(ParserRuleContext node) {
         if (node == null) {
             return Collections.emptySet();
         }
-        Set<String> namedParameters = new HashSet<String>();
-        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-            node.jjtGetChild(i).visit(namedParameterVisitor, namedParameters);
+        final Set<String> namedParameters = new HashSet<>();
+        final NamedParameterVisitor namedParameterVisitor = new NamedParameterVisitor(namedParameters);
+        for (int i = 0; i < node.getChildCount(); i++) {
+            namedParameterVisitor.visit(node.getChild(i));
         }
         return Collections.unmodifiableSet(namedParameters);
     }
 
-    public Set<String> getPositionalParameters(Node node) {
+    public Set<String> getPositionalParameters(BaseContext node) {
         if (node == null) {
             return Collections.emptySet();
         }
-        Set<String> positionalParameters = new HashSet<String>();
-        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-            node.jjtGetChild(i).visit(positionalParameterVisitor, positionalParameters);
+        Set<String> positionalParameters = new HashSet<>();
+        final PositionalParameterVisitor positionalParameterVisitor
+                = new PositionalParameterVisitor(positionalParameters);
+        for (int i = 0; i < node.getChildCount(); i++) {
+            positionalParameterVisitor.visit(node.getChild(i));
         }
         return Collections.unmodifiableSet(positionalParameters);
     }
 
-    private class ConstructorArgReturnTypeVisitor extends JpqlVisitorAdapter<ValueHolder<Class<?>>> {
-
-        public boolean visit(JpqlClassName node, ValueHolder<Class<?>> valueHolder) {
-            try {
-                valueHolder.setValue(toClass(node.toString()));
-            } catch (ClassNotFoundException e) {
-                throw new PersistenceException(e);
-            }
-            return false;
-        }
-
-        private Class<?> toClass(String classname) throws ClassNotFoundException {
-            try {
-                return Class.forName(classname);
-            } catch (ClassNotFoundException e) {
-                return Thread.currentThread().getContextClassLoader().loadClass(classname);
-            }
+    private static Class<?> toClass(String classname) throws ClassNotFoundException {
+        try {
+            return Class.forName(classname);
+        } catch (ClassNotFoundException e) {
+            return Thread.currentThread().getContextClassLoader().loadClass(classname);
         }
     }
 
-    private class SelectVisitor extends JpqlVisitorAdapter<List<Path>> {
+    private static Alias getAlias(BaseContext ctx) {
+        if (ctx instanceof JpqlParser.MainEntityPersisterReferenceContext) {
+            JpqlParser.MainEntityPersisterReferenceContext context = (JpqlParser.MainEntityPersisterReferenceContext)ctx;
+            if (context.identificationVariableDef() == null) {
+                throw new PersistenceException("Missing alias for type " + context.simplePathQualifier().toJpqlString());
+            }
+            return new Alias(context.identificationVariableDef().getText());
+        }
+        throw new PersistenceException("Missing alias for type " + ((BaseContext)ctx.getChild(0)).toJpqlString());
+    }
 
-        private final SelectPathVisitor selectPathVisitor = new SelectPathVisitor();
+    private static final class ConstructorArgReturnTypeVisitor extends JpqlValueHolderVisitor<Class<?>> {
 
-        public boolean visit(JpqlSelectExpression node, List<Path> selectedPaths) {
-            node.visit(selectPathVisitor, selectedPaths);
-            return false;
+        private final Metamodel metamodel;
+
+        ConstructorArgReturnTypeVisitor(Metamodel metamodel) {
+            this.metamodel = metamodel;
         }
 
-        public boolean visit(JpqlConstructorParameter node, List<Path> selectedPaths) {
-            node.visit(selectPathVisitor, selectedPaths);
-            return false;
-        }
+        @Override
+        public ValueHolder<Class<?>> visitMainEntityPersisterReference(
+                JpqlParser.MainEntityPersisterReferenceContext ctx) {
+            String entityClassName = ctx.simplePathQualifier().getText();
 
-        public boolean visit(JpqlSubselect node, List<Path> selectedPaths) {
-            return false;
+            Class<?> clazz;
+            try {
+                clazz = toClass(entityClassName);
+                if (clazz.isInterface()) {
+                    for (ManagedType managedType : metamodel.getManagedTypes()) {
+                        if (clazz.isAssignableFrom(managedType.getJavaType())) {
+                            defaultResult().setValue(clazz);
+                        }
+                    }
+                    return stopVisitingChildren();
+                } else {
+                    defaultResult().setValue(clazz);
+                    return stopVisitingChildren();
+                }
+            } catch (ClassNotFoundException ignored) {
+                // Ignore if not found
+            }
+
+            for (EntityType entityType : metamodel.getEntities()) {
+                if (entityType.getName().equals(entityClassName)) {
+                    defaultResult().setValue(entityType.getJavaType());
+                    return stopVisitingChildren();
+                }
+            }
+
+            return defaultResult();
         }
     }
 
-    private class SelectPathVisitor extends JpqlVisitorAdapter<List<Path>> {
+    private static final class SelectVisitor extends JpqlVisitorAdapter<List<Path>> {
 
-        private final EntryVisitor entryVisitor = new EntryVisitor();
+        private final SelectPathVisitor selectPathVisitor;
+
+        SelectVisitor(List<Path> value) {
+            super(value);
+            this.selectPathVisitor = new SelectPathVisitor(value);
+        }
+
+        @Override
+        public List<Path> visitSelectExpression(JpqlParser.SelectExpressionContext node) {
+            selectPathVisitor.visit(node);
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitConstructionParameter(JpqlParser.ConstructionParameterContext ctx) {
+            selectPathVisitor.visit(ctx);
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitSubQuery(JpqlParser.SubQueryContext ctx) {
+            return stopVisitingChildren();
+        }
+    }
+
+    private static final class SelectPathVisitor extends JpqlVisitorAdapter<List<Path>> {
+
         private final QueryPreparator queryPreparator = new QueryPreparator();
 
-        public boolean visit(JpqlClassName node, List<Path> selectedPaths) {
-            return false;
+        SelectPathVisitor(List<Path> value) {
+            super(value);
         }
 
-        public boolean visit(JpqlCase node, List<Path> selectedPaths) {
-            List<? extends Path> conditionalPaths = new ArrayList<ConditionalPath>();
-            int start = isSimpleCase(node)? 1: 0;
-            for (int i = start; i < node.jjtGetNumChildren() - 1; i++) {
-                node.jjtGetChild(i).visit(this, (List<Path>)conditionalPaths);
+        @Override
+        public List<Path> visitMainEntityPersisterReference(JpqlParser.MainEntityPersisterReferenceContext ctx) {
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitSimpleCaseStatement(JpqlParser.SimpleCaseStatementContext node) {
+            List<ConditionalPath> conditionalPaths = new ArrayList<>();
+            throw new UnsupportedOperationException();
+            /*
+            int start = 1isSimpleCase(node) ? 1 : 0;
+            for (int i = start; i < node.getChildCount() - 1; i++) {
+                this.visit(node.getChild(i));
             }
-            Node condition = null;
-            for (ConditionalPath path: (List<ConditionalPath>)conditionalPaths) {
-                if (condition == null) {
-                    selectedPaths.add(path);
-                    condition = queryPreparator.createNot(queryPreparator.createBrackets(path.getCondition()));
-                } else {
-                    Node composedCondition
-                        = queryPreparator.createAnd(condition, queryPreparator.createBrackets(path.getCondition()));
-                    selectedPaths.add(path.newCondition(composedCondition));
-                    Node newCondition = queryPreparator.createNot(queryPreparator.createBrackets(path.getCondition()));
-                    condition = queryPreparator.createAnd(condition, newCondition);
-                }
-            }
-            selectedPaths.add(new ConditionalPath(node.jjtGetChild(node.jjtGetNumChildren() - 1).toString(),
-                                                  condition));
-            return false;
+
+            BaseContext condition = getBaseContext(conditionalPaths);
+            defaultResult().add(new ConditionalPath(node.getChild(node.getChildCount() - 1).toString(), condition));
+            return stopVisitingChildren();
+            */
         }
 
-        public boolean visit(JpqlWhen node, List<Path> selectedPaths) {
-            selectedPaths.add(extractConditionalPath(node));
-            return false;
-        }
-
-        public boolean visit(JpqlCoalesce node, List<Path> selectedPaths) {
-            List<ConditionalPath> conditionalPaths = new ArrayList<ConditionalPath>();
-            Node condition = null;
-            for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-                Node childNode = node.jjtGetChild(i);
-                Node conditionNode = queryPreparator.createIsNotNull(childNode.clone());
+        @Override
+        public List<Path> visitCoalesce(JpqlParser.CoalesceContext node) {
+            List<ConditionalPath> conditionalPaths = new ArrayList<>();
+            for (int i = 0; i < node.getChildCount(); i++) {
+                JpqlParser.ExpressionContext childNode = node.expression(i);
+                JpqlParser.IsNullPredicateContext conditionNode
+                        = queryPreparator.createIsNotNull(TreeRewriteSupport.copy(childNode));
                 conditionalPaths.add(new ConditionalPath(childNode.toString(), conditionNode));
             }
-            for (ConditionalPath path: (List<ConditionalPath>)conditionalPaths) {
+
+            throw new UnsupportedOperationException();
+            /*
+            BaseContext condition = getBaseContext(conditionalPaths);
+            defaultResult().add(new ConditionalPath(node.getChild(node.getChildCount() - 1).getText(), condition));
+            return stopVisitingChildren();
+            */
+        }
+
+        /*
+        private BaseContext getBaseContext(List<ConditionalPath> conditionalPaths) {
+            BaseContext condition = null;
+            for (ConditionalPath path: conditionalPaths) {
                 if (condition == null) {
-                    selectedPaths.add(path);
+                    defaultResult().add(path);
                     condition = queryPreparator.createNot(queryPreparator.createBrackets(path.getCondition()));
                 } else {
-                    Node composedCondition
-                        = queryPreparator.createAnd(condition, queryPreparator.createBrackets(path.getCondition()));
-                    selectedPaths.add(path.newCondition(composedCondition));
-                    Node newCondition = queryPreparator.createNot(queryPreparator.createBrackets(path.getCondition()));
+                    BaseContext composedCondition
+                            = queryPreparator.createAnd(condition, queryPreparator.createBrackets(path.getCondition()));
+                    defaultResult().add(path.newCondition(composedCondition));
+                    BaseContext newCondition = queryPreparator.createNot(queryPreparator.createBrackets(path.getCondition()));
                     condition = queryPreparator.createAnd(condition, newCondition);
                 }
             }
-            selectedPaths.add(new ConditionalPath(node.jjtGetChild(node.jjtGetNumChildren() - 1).toString(),
-                                                  condition));
+            return condition;
+        }
+        */
+
+        @Override
+        public List<Path> visitSimpleCaseWhen(JpqlParser.SimpleCaseWhenContext ctx) {
+            defaultResult().add(extractConditionalPath(ctx));
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitSearchedCaseWhen(JpqlParser.SearchedCaseWhenContext ctx) {
+            defaultResult().add(extractConditionalPath(ctx));
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitNullIf(JpqlParser.NullIfContext node) {
+            JpqlParser.ExpressionContext child1 = TreeRewriteSupport.copy(node.expression(0));
+            JpqlParser.ExpressionContext child2 = TreeRewriteSupport.copy(node.expression(1));
+            defaultResult().add(
+                    new ConditionalPath(child1.toString(), queryPreparator.createNotEquals(child1, child2)));
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitMapEntryPath(MapEntryPathContext ctx) {
+            Path entryPath = new Path(ctx.toString());
+            defaultResult().add(new Path("ENTRY(" + ctx.mapReference().getText() + ")"));
+            defaultResult().add(new Path("KEY(" + entryPath.getRootAlias().getName() + ")"));
+            defaultResult().add(new Path("VALUE(" + entryPath.getRootAlias().getName() + ")"));
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitMapKeyPathRoot(MapKeyPathRootContext ctx) {
+            defaultResult().add(new Path("KEY(" + ctx.mapReference().getText() + ")"));
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitCollectionValuePathRoot(CollectionValuePathRootContext ctx) {
+            defaultResult().add(new Path("VALUE(" + ctx.collectionReference().getText() + ")"));
+            defaultResult().add(new Path(ctx.getText()));
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public List<Path> visitIdentificationVariable(JpqlParser.IdentificationVariableContext node) {
+            defaultResult().add(new Path(node.toString()));
+            return stopVisitingChildren();
+        }
+
+        private ConditionalPath extractConditionalPath(JpqlParser.SimpleCaseWhenContext node) {
+            return new ConditionalPath(
+                    node.getChild(1).getText(),
+                    (JpqlParser.ExpressionContext)Trees.shallowCopy(node.expression(0))
+            );
+        }
+
+        private ConditionalPath extractConditionalPath(JpqlParser.SearchedCaseWhenContext node) {
+            return new ConditionalPath(
+                    node.getChild(1).getText(),
+                    (JpqlParser.ExpressionContext)Trees.shallowCopy(node.predicate())
+            );
+        }
+
+        private static boolean isSimpleCase(JpqlParser.SimpleCaseWhenContext caseWhenContext) {
+            return true;
+        }
+
+        private static boolean isSimpleCase(JpqlParser.SearchedCaseWhenContext caseWhenContext) {
             return false;
-        }
-
-        public boolean visit(JpqlNullif node, List<Path> selectedPaths) {
-            Node child1 = node.jjtGetChild(0).clone();
-            Node child2 = node.jjtGetChild(1).clone();
-            selectedPaths.add(new ConditionalPath(child1.toString(), queryPreparator.createNotEquals(child1, child2)));
-            return false;
-        }
-
-        public boolean visit(JpqlPath node, List<Path> selectedPaths) {
-            if (entryVisitor.isEntry(node)) {
-                Path entryPath = new Path(node.toString());
-                selectedPaths.add(new Path("KEY(" + entryPath.getRootAlias().getName() + ")"));
-                selectedPaths.add(new Path("VALUE(" + entryPath.getRootAlias().getName() + ")"));
-            } else {
-                selectedPaths.add(new Path(node.toString()));
-            }
-            return false;
-        }
-
-        public boolean visit(JpqlIdentificationVariable node, List<Path> selectedPaths) {
-            selectedPaths.add(new Path(node.toString()));
-            return false;
-        }
-
-        private ConditionalPath extractConditionalPath(JpqlWhen node) {
-            if (isSimpleCase(node)) {
-                Node base = getSimpleCaseConditionBase(node).clone();
-                Node condition = queryPreparator.createEquals(base, node.jjtGetChild(0).clone());
-                return new ConditionalPath(node.jjtGetChild(1).toString(), condition);
-            } else {
-                return new ConditionalPath(node.jjtGetChild(1).toString(), node.jjtGetChild(0).clone());
-            }
-        }
-
-        private boolean isSimpleCase(JpqlWhen node) {
-            return !(getSimpleCaseConditionBase(node) instanceof JpqlWhen);
-        }
-
-        private boolean isSimpleCase(JpqlCase node) {
-            return !(getSimpleCaseConditionBase(node) instanceof JpqlWhen);
-        }
-
-        private Node getSimpleCaseConditionBase(JpqlWhen node) {
-            return getSimpleCaseConditionBase((JpqlCase)node.jjtGetParent());
-        }
-
-        private Node getSimpleCaseConditionBase(JpqlCase node) {
-            return node.jjtGetChild(0);
         }
     }
 
-    private class AliasVisitor extends JpqlVisitorAdapter<Set<TypeDefinition>> {
+    private static final class AliasVisitor extends JpqlVisitorAdapter<Set<TypeDefinition>> {
 
-        public boolean visit(JpqlSelectExpression node, Set<TypeDefinition> typeDefinitions) {
-            if (node.jjtGetNumChildren() == 1) {
-                return false;
+        private final PathVisitor pathVisitor = new PathVisitor();
+
+        private final Metamodel metamodel;
+
+        AliasVisitor(Set<TypeDefinition> value, Metamodel metamodel) {
+            super(value);
+            this.metamodel = metamodel;
+        }
+
+        @Override
+        public Set<TypeDefinition> visit(ParseTree tree) {
+            final Set<TypeDefinition> typeDefinitions = super.visit(tree);
+            determinePreliminaryTypes(typeDefinitions);
+            return typeDefinitions;
+        }
+
+        @Override
+        public Set<TypeDefinition> visitMainEntityPersisterReference(MainEntityPersisterReferenceContext ctx) {
+            String entityClassName = ctx.simplePathQualifier().getText();
+            Path path = pathVisitor.getPath(ctx);
+            Alias alias = getAlias(ctx);
+
+            Class<?> clazz;
+            try {
+                clazz = toClass(entityClassName);
+                if (clazz.isInterface()) {
+                    for (ManagedType managedType: metamodel.getManagedTypes()) {
+                        if (clazz.isAssignableFrom(managedType.getJavaType())) {
+                            defaultResult().add(new TypeDefinition(alias, managedType.getJavaType()));
+                        }
+                    }
+                    return stopVisitingChildren();
+                } else if (metamodel.entity(clazz) != null) {
+                    defaultResult().add(new TypeDefinition(alias, clazz));
+                    return stopVisitingChildren();
+                }
+            } catch (ClassNotFoundException ignored) {
+                // Ignore if not found
             }
-            Path path = pathVisitor.getPath(node);
-            Alias alias = getAlias(node);
-            Class<?> type = null;
-            if (countVisitor.isCount(node)) {
+
+            try {
+                clazz = TypeDefinition.Filter.managedTypeForPath(path).filter(defaultResult()).getJavaType();
+                defaultResult().add(new TypeDefinition(alias, clazz));
+                return stopVisitingChildren();
+            } catch (TypeNotPresentException e) {
+                // Ignore if not found
+            }
+
+            for (EntityType entityType: metamodel.getEntities()) {
+                if (entityType.getName().equals(entityClassName)) {
+                    defaultResult().add(new TypeDefinition(alias, entityType.getJavaType()));
+                    return stopVisitingChildren();
+                }
+            }
+
+            // type must be determined later
+            defaultResult().add(new TypeDefinition(alias, null));
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public Set<TypeDefinition> visitSelectionList(JpqlParser.SelectionListContext ctx) {
+            if (ctx.selection().size() == 1) {
+                return stopVisitingChildren();
+            }
+            Path path = pathVisitor.getPath(ctx);
+            Alias alias = getAlias(ctx);
+            Class<?> type;
+            if (new CountVisitor().isCount(ctx)) {
                 type = Long.class;
             } else {
                 try {
-                    type = TypeDefinition.Filter.managedTypeForPath(path).filter(typeDefinitions).getJavaType();
+                    type = TypeDefinition.Filter.managedTypeForPath(path).filter(defaultResult()).getJavaType();
                 } catch (TypeNotPresentException e) {
                     type = null; // must be determined later
                 }
             }
-            typeDefinitions.add(new TypeDefinition(alias, type, path, path.hasSubpath(), false));
-            return false;
+            defaultResult().add(new TypeDefinition(alias, type, path, path.hasSubpath(), false));
+            return stopVisitingChildren();
         }
 
-        public boolean visit(JpqlFromItem node, Set<TypeDefinition> typeDefinitions) {
-            String abstractSchemaName = node.jjtGetChild(0).toString().trim();
+        @Override
+        public Set<TypeDefinition> visitFromElementSpaceRoot(JpqlParser.FromElementSpaceRootContext node) {
+            String abstractSchemaName = node.getChild(0).toString().trim();
             Alias alias = getAlias(node);
-            Collection<Class<?>> types = new HashSet<Class<?>>();
+            Collection<Class<?>> types = new HashSet<>();
             EntityType<?> entityType = ManagedTypeFilter.forModel(metamodel).filter(abstractSchemaName);
             if (entityType != null) {
                 types.add(entityType.getJavaType());
@@ -346,41 +471,20 @@ public class JpqlCompiler {
                 throw new PersistenceException("Managed type not found for type " + abstractSchemaName.trim());
             }
             for (Class<?> type: types) {
-                typeDefinitions.add(new TypeDefinition(alias, type));
+                defaultResult().add(new TypeDefinition(alias, type));
             }
-            determinePreliminaryTypes(typeDefinitions);
-            return false;
+            return stopVisitingChildren();
         }
 
-        public boolean visit(JpqlInCollection node, Set<TypeDefinition> typeDefinitions) {
-            return visitJoin(node, typeDefinitions, true, false);
-        }
-
-        public boolean visit(JpqlInnerJoin node, Set<TypeDefinition> typeDefinitions) {
-            return visitJoin(node, typeDefinitions, true, false);
-        }
-
-        public boolean visit(JpqlOuterJoin node, Set<TypeDefinition> typeDefinitions) {
-            return visitJoin(node, typeDefinitions, false, false);
-        }
-
-        public boolean visit(JpqlOuterFetchJoin node, Set<TypeDefinition> typeDefinitions) {
-            return visitJoin(node, typeDefinitions, false, true);
-        }
-
-        public boolean visit(JpqlInnerFetchJoin node, Set<TypeDefinition> typeDefinitions) {
-            return visitJoin(node, typeDefinitions, true, true);
-        }
-
-        private boolean visitJoin(Node node,
-                                  Set<TypeDefinition> typeDefinitions,
-                                  boolean innerJoin,
-                                  boolean fetchJoin) {
-            Path fetchPath = new Path(node.jjtGetChild(0).toString());
+        @Override
+        public Set<TypeDefinition> visitQualifiedJoin(JpqlParser.QualifiedJoinContext ctx) {
+            boolean innerJoin = ctx.LEFT() == null || ctx.OUTER() == null;
+            boolean fetchJoin = ctx.FETCH() != null;
+            Path fetchPath = new Path(ctx.getChild(0).toString());
             Class<?> keyType = null;
             Attribute<?, ?> attribute = TypeDefinition.Filter.attributeForPath(fetchPath)
                     .withMetamodel(metamodel)
-                    .filter(typeDefinitions);
+                    .filter(defaultResult());
             Class<?> type;
             if (attribute instanceof MapAttribute) {
                 MapAttribute<?, ?, ?> mapAttribute = (MapAttribute<?, ?, ?>)attribute;
@@ -389,41 +493,58 @@ public class JpqlCompiler {
             } else {
                 type = TypeDefinition.Filter.managedTypeForPath(fetchPath)
                         .withMetamodel(metamodel)
-                        .filter(typeDefinitions)
+                        .filter(defaultResult())
                         .getJavaType();
             }
             if (keyType != null) {
-                typeDefinitions.add(new TypeDefinition(keyType, fetchPath, innerJoin, fetchJoin));
+                defaultResult().add(new TypeDefinition(keyType, fetchPath, innerJoin, fetchJoin));
             }
-            if (node.jjtGetNumChildren() == 1) {
-                typeDefinitions.add(new TypeDefinition(type, fetchPath, innerJoin, fetchJoin));
+            if (ctx.getChildCount() == 1) {
+                defaultResult().add(new TypeDefinition(type, fetchPath, innerJoin, fetchJoin));
             } else {
-                Alias alias = getAlias(node);
-                typeDefinitions.add(new TypeDefinition(alias, type, fetchPath, innerJoin, fetchJoin));
+                Alias alias = getAlias(ctx);
+                defaultResult().add(new TypeDefinition(alias, type, fetchPath, innerJoin, fetchJoin));
             }
-            return false;
+            return stopVisitingChildren();
         }
 
-        public boolean visit(JpqlSubselect node, Set<TypeDefinition> typeDefinitions) {
-            return false;
+        @Override
+        public Set<TypeDefinition> visitSubQuery(JpqlParser.SubQueryContext ctx) {
+            return stopVisitingChildren();
         }
 
-        private Alias getAlias(Node node) {
-            if (node.jjtGetNumChildren() < 2) {
-                throw new PersistenceException("Missing alias for type " + node.jjtGetChild(0).toString());
+        private Alias getAlias(BaseContext ctx) {
+            if (ctx instanceof JpqlParser.MainEntityPersisterReferenceContext) {
+                JpqlParser.MainEntityPersisterReferenceContext context
+                        = (JpqlParser.MainEntityPersisterReferenceContext)ctx;
+                if (context.identificationVariableDef() == null) {
+                    throw new PersistenceException(
+                            "Missing alias for type " + context.simplePathQualifier().toJpqlString());
+                }
+                return new Alias(context.identificationVariableDef().getText());
             }
-            return new Alias(node.jjtGetChild(1).toString());
+            throw new PersistenceException(
+                    "Missing alias for type " + ((BaseContext)ctx.getChild(0)).toJpqlString());
         }
 
         private void determinePreliminaryTypes(Set<TypeDefinition> typeDefinitions) {
             for (TypeDefinition typeDefinition: typeDefinitions) {
                 if (typeDefinition.isPreliminary()) {
                     try {
-                        Class<?> type = TypeDefinition.Filter.managedTypeForPath(typeDefinition.getJoinPath())
-                                .withMetamodel(metamodel)
-                                .filter(typeDefinitions)
-                                .getJavaType();
-                        typeDefinition.setType(type);
+                        Class<?> type;
+                        if (typeDefinition.getJoinPath() != null) {
+                            type = TypeDefinition.Filter.managedTypeForPath(typeDefinition.getJoinPath())
+                                    .withMetamodel(metamodel)
+                                    .filter(typeDefinitions)
+                                    .getJavaType();
+                            typeDefinition.setType(type);
+                        } else {
+                            for (EntityType<?> entityType: metamodel.getEntities()) {
+                                if (entityType.getName().equals(typeDefinition.toString())) {
+                                    typeDefinition.setType(entityType.getJavaType());
+                                }
+                            }
+                        }
                     } catch (TypeNotPresentException e) {
                         // must be determined later
                     }
@@ -432,61 +553,73 @@ public class JpqlCompiler {
         }
     }
 
-    private class NamedParameterVisitor extends JpqlVisitorAdapter<Set<String>> {
+    private static final class NamedParameterVisitor extends JpqlVisitorAdapter<Set<String>> {
 
-        public boolean visit(JpqlNamedInputParameter node, Set<String> namedParameters) {
-            namedParameters.add(node.jjtGetChild(0).getValue());
-            return true;
+        NamedParameterVisitor(Set<String> namedParameters) {
+            super(namedParameters);
+        }
+
+        @Override
+        public Set<String> visitNamedParameter(JpqlParser.NamedParameterContext node) {
+            defaultResult().add(node.getText());
+            return defaultResult();
         }
     }
 
-    private class PositionalParameterVisitor extends JpqlVisitorAdapter<Set<String>> {
+    private static final class PositionalParameterVisitor extends JpqlVisitorAdapter<Set<String>> {
 
-        public boolean visit(JpqlPositionalInputParameter node, Set<String> positionalParameters) {
-            positionalParameters.add(node.getValue());
-            return true;
+        PositionalParameterVisitor(Set<String> namedParameters) {
+            super(namedParameters);
+        }
+
+        @Override
+        public Set<String> visitPositionalParameter(JpqlParser.PositionalParameterContext node) {
+            defaultResult().add(node.getText());
+            return defaultResult();
         }
     }
 
-    private class PathVisitor extends JpqlVisitorAdapter<ValueHolder<Path>> {
+    private static final class PathVisitor extends JpqlValueHolderVisitor<Path> {
 
-        public Path getPath(Node node) {
-            ValueHolder<Path> result = new ValueHolder<Path>();
-            node.visit(this, result);
-            return result.getValue();
+        @Override
+        public ValueHolder<Path> visit(ParseTree tree) {
+            defaultResult().setValue(null);
+            return super.visit(tree);
         }
 
-        public boolean visit(JpqlPath node, ValueHolder<Path> result) {
-            result.setValue(new Path(node.toString()));
-            return false;
-        }
-    }
-
-    private class CountVisitor extends JpqlVisitorAdapter<ValueHolder<Boolean>> {
-
-        public boolean isCount(Node node) {
-            ValueHolder<Boolean> result = new ValueHolder<Boolean>(Boolean.FALSE);
-            node.visit(this, result);
-            return result.getValue();
+        @Override
+        public ValueHolder<Path> visitMainEntityPersisterReference(MainEntityPersisterReferenceContext ctx) {
+            defaultResult().setValue(new Path(ctx.simplePathQualifier().toJpqlString()));
+            return stopVisitingChildren();
         }
 
-        public boolean visit(JpqlCount node, ValueHolder<Boolean> result) {
-            result.setValue(Boolean.TRUE);
-            return false;
+        @Override
+        public ValueHolder<Path> visitPathExpression(JpqlParser.PathExpressionContext ctx) {
+            defaultResult().setValue(new Path(ctx.getText()));
+            return stopVisitingChildren();
+        }
+
+        Path getPath(BaseContext node) {
+            return this.visit(node).getValue();
         }
     }
 
-    private class EntryVisitor extends JpqlVisitorAdapter<ValueHolder<Boolean>> {
+    private static final class CountVisitor extends JpqlValueHolderVisitor<Boolean> {
 
-        public boolean isEntry(JpqlPath node) {
-            ValueHolder<Boolean> result = new ValueHolder<Boolean>(Boolean.FALSE);
-            node.visit(this, result);
-            return result.getValue();
+        @Override
+        public ValueHolder<Boolean> visit(ParseTree tree) {
+            defaultResult().setValue(false);
+            return super.visit(tree);
         }
 
-        public boolean visit(JpqlEntry node, ValueHolder<Boolean> result) {
-            result.setValue(Boolean.TRUE);
-            return false;
+        @Override
+        public ValueHolder<Boolean> visitCountFunction(JpqlParser.CountFunctionContext ctx) {
+            defaultResult().setValue(true);
+            return defaultResult();
+        }
+
+        boolean isCount(BaseContext node) {
+            return this.visit(node).getValue();
         }
     }
 }

@@ -16,7 +16,6 @@
 package org.jpasecurity.tags;
 
 import java.util.Enumeration;
-
 import javax.servlet.jsp.PageContext;
 import javax.servlet.jsp.tagext.Tag;
 import javax.servlet.jsp.tagext.TagSupport;
@@ -25,15 +24,15 @@ import org.jpasecurity.AccessManager;
 
 /**
  * Baseclass for tags that do access-checks.
+ *
  * @author Arne Limburg
  */
 public abstract class AbstractSecurityTag extends TagSupport {
 
+    private static final long serialVersionUID = 2006475224233451549L;
+
     public AccessManager getAccessManager() {
-
-        AccessManager accessManager;
-
-        accessManager = resolveAccessManager(PageContext.PAGE_SCOPE);
+        AccessManager accessManager = resolveAccessManager(PageContext.PAGE_SCOPE);
         if (accessManager != null) {
             return accessManager;
         }
@@ -52,6 +51,7 @@ public abstract class AbstractSecurityTag extends TagSupport {
         throw new IllegalStateException("No access manager defined for this page");
     }
 
+    @Override
     public int doStartTag() {
         if (!isAccessible()) {
             return Tag.SKIP_BODY;

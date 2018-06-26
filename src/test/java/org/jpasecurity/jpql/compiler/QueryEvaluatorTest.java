@@ -19,6 +19,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,17 +39,8 @@ import javax.persistence.metamodel.SingularAttribute;
 import org.jpasecurity.Alias;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
-import org.jpasecurity.jpql.parser.JpqlFrom;
-import org.jpasecurity.jpql.parser.JpqlGroupBy;
-import org.jpasecurity.jpql.parser.JpqlHaving;
-import org.jpasecurity.jpql.parser.JpqlOrderBy;
 import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.JpqlSelect;
-import org.jpasecurity.jpql.parser.JpqlSelectClause;
-import org.jpasecurity.jpql.parser.JpqlStatement;
-import org.jpasecurity.jpql.parser.JpqlSubselect;
-import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.ParseException;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.model.ChildTestBean;
 import org.jpasecurity.model.MethodAccessTestBean;
 import org.jpasecurity.model.ParentTestBean;
@@ -66,18 +58,16 @@ public class QueryEvaluatorTest {
     private static final int HAVING_CLAUSE_INDEX = 4;
     private static final int ORDER_BY_CLAUSE_INDEX = 5;
 
-    private Metamodel metamodel;
-    private JpqlParser parser;
     private JpqlCompiler compiler;
     private QueryEvaluator queryEvaluator;
     private QueryEvaluationParameters parameters;
-    private Map<Alias, Object> aliases = new HashMap<Alias, Object>();
-    private Map<String, Object> namedParameters = new HashMap<String, Object>();
-    private Map<Integer, Object> positionalParameters = new HashMap<Integer, Object>();
+    private Map<Alias, Object> aliases = new HashMap<>();
+    private Map<String, Object> namedParameters = new HashMap<>();
+    private Map<Integer, Object> positionalParameters = new HashMap<>();
 
     @Before
     public void initialize() throws NoSuchMethodException {
-        metamodel = mock(Metamodel.class);
+        Metamodel metamodel = mock(Metamodel.class);
         SecurePersistenceUnitUtil persistenceUnitUtil = mock(SecurePersistenceUnitUtil.class);
 
         EntityType methodAccessTestBeanType = mock(EntityType.class);
@@ -89,19 +79,19 @@ public class QueryEvaluatorTest {
         SingularAttribute parentAttribute = mock(SingularAttribute.class);
         PluralAttribute childrenAttribute = mock(PluralAttribute.class);
         PluralAttribute relatedAttribute = mock(PluralAttribute.class);
-        when(metamodel.getEntities()).thenReturn(new HashSet<EntityType<?>>(Arrays.<EntityType<?>>asList(
+        when(metamodel.getEntities()).thenReturn(new HashSet<>(Arrays.<EntityType<?>>asList(
                 methodAccessTestBeanType, childTestBeanType)));
-        when(metamodel.entity(MethodAccessTestBean.class)).thenReturn(methodAccessTestBeanType);
-        when(metamodel.managedType(MethodAccessTestBean.class)).thenReturn(methodAccessTestBeanType);
-        when(metamodel.entity(ChildTestBean.class)).thenReturn(childTestBeanType);
-        when(metamodel.managedType(ChildTestBean.class)).thenReturn(childTestBeanType);
+        doReturn(methodAccessTestBeanType).when(metamodel).entity(MethodAccessTestBean.class);
+        doReturn(methodAccessTestBeanType).when(metamodel).managedType(MethodAccessTestBean.class);
+        doReturn(childTestBeanType).when(metamodel).entity(ChildTestBean.class);
+        doReturn(childTestBeanType).when(metamodel).managedType(ChildTestBean.class);
         when(metamodel.managedType(ParentTestBean.class))
             .thenThrow(new IllegalArgumentException("managed type not found"));
         when(metamodel.embeddable(ParentTestBean.class))
             .thenThrow(new IllegalArgumentException("embeddable not found"));
         when(methodAccessTestBeanType.getName()).thenReturn(MethodAccessTestBean.class.getSimpleName());
-        when(methodAccessTestBeanType.getJavaType()).thenReturn((Class)MethodAccessTestBean.class);
-        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet(Arrays.asList(
+        when(methodAccessTestBeanType.getJavaType()).thenReturn(MethodAccessTestBean.class);
+        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet<>(Arrays.asList(
                 idAttribute, nameAttribute, parentAttribute, childrenAttribute, relatedAttribute)));
         when(methodAccessTestBeanType.getAttribute("id")).thenReturn(idAttribute);
         when(methodAccessTestBeanType.getAttribute("name")).thenReturn(nameAttribute);
@@ -109,7 +99,7 @@ public class QueryEvaluatorTest {
         when(methodAccessTestBeanType.getAttribute("children")).thenReturn(childrenAttribute);
         when(methodAccessTestBeanType.getAttribute("related")).thenReturn(relatedAttribute);
         when(childTestBeanType.getName()).thenReturn(ChildTestBean.class.getSimpleName());
-        when(childTestBeanType.getJavaType()).thenReturn((Class)ChildTestBean.class);
+        when(childTestBeanType.getJavaType()).thenReturn(ChildTestBean.class);
         when(idAttribute.getName()).thenReturn("id");
         when(idAttribute.isCollection()).thenReturn(false);
         when(idAttribute.getType()).thenReturn(intType);
@@ -135,10 +125,9 @@ public class QueryEvaluatorTest {
         when(relatedAttribute.getJavaMember())
             .thenReturn(MethodAccessTestBean.class.getDeclaredMethod("getRelated"));
 
-        parser = new JpqlParser();
         compiler = new JpqlCompiler(metamodel);
-        SubselectEvaluator simpleSubselectEvaluator = new SimpleSubselectEvaluator();
-        queryEvaluator = new QueryEvaluator(compiler, persistenceUnitUtil, simpleSubselectEvaluator);
+        SubQueryEvaluator simpleSubselectEvaluator = new SimpleSubselectEvaluator();
+        queryEvaluator = new QueryEvaluatorImpl(compiler, persistenceUnitUtil, simpleSubselectEvaluator);
         parameters = new QueryEvaluationParameters(metamodel,
                                                    persistenceUnitUtil,
                                                    aliases,
@@ -154,17 +143,24 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    public void canEvaluate() throws Exception {
-        JpqlCompiledStatement statement = compile("SELECT bean " + "FROM MethodAccessTestBean bean "
-                                                  + "WHERE bean.name = :name " + "GROUP BY bean.parent "
-                                                  + "HAVING COUNT(bean.parent) > 1 " + "ORDER BY bean.parent.id");
-        JpqlSelect selectStatement = (JpqlSelect)statement.getStatement().jjtGetChild(0);
-        JpqlSelectClause selectClause = (JpqlSelectClause)selectStatement.jjtGetChild(SELECT_CLAUSE_INDEX);
-        JpqlFrom fromClause = (JpqlFrom)selectStatement.jjtGetChild(FROM_CLAUSE_INDEX);
-        JpqlWhere whereClause = (JpqlWhere)selectStatement.jjtGetChild(WHERE_CLAUSE_INDEX);
-        JpqlGroupBy groupByClause = (JpqlGroupBy)selectStatement.jjtGetChild(GROUP_BY_CLAUSE_INDEX);
-        JpqlHaving havingClause = (JpqlHaving)selectStatement.jjtGetChild(HAVING_CLAUSE_INDEX);
-        JpqlOrderBy orderByClause = (JpqlOrderBy)selectStatement.jjtGetChild(ORDER_BY_CLAUSE_INDEX);
+    public void canEvaluate() throws NotEvaluatableException {
+        JpqlCompiledStatement statement = compile("SELECT bean FROM MethodAccessTestBean bean "
+                                                  + "WHERE bean.name = :name GROUP BY bean.parent "
+                                                  + "HAVING COUNT(bean.parent) > 1 ORDER BY bean.parent.id");
+        JpqlParser.SelectStatementContext selectStatement =
+                (JpqlParser.SelectStatementContext)statement.getStatement().getChild(0);
+        JpqlParser.SelectExpressionContext selectClause =
+                (JpqlParser.SelectExpressionContext)selectStatement.getChild(SELECT_CLAUSE_INDEX);
+        JpqlParser.FromClauseContext fromClause =
+                (JpqlParser.FromClauseContext)selectStatement.getChild(FROM_CLAUSE_INDEX);
+        JpqlParser.WhereClauseContext whereClause =
+                (JpqlParser.WhereClauseContext)selectStatement.getChild(WHERE_CLAUSE_INDEX);
+        JpqlParser.GroupByClauseContext groupByClause =
+                (JpqlParser.GroupByClauseContext)selectStatement.getChild(GROUP_BY_CLAUSE_INDEX);
+        JpqlParser.HavingClauseContext havingClause =
+                (JpqlParser.HavingClauseContext)selectStatement.getChild(HAVING_CLAUSE_INDEX);
+        JpqlParser.OrderByClauseContext orderByClause =
+                (JpqlParser.OrderByClauseContext)selectStatement.getChild(ORDER_BY_CLAUSE_INDEX);
 
         //InMemoryEvaluator may only evaluate whereClause when alias and named parameter are set
         assertFalse(queryEvaluator.canEvaluate(selectStatement, parameters));
@@ -225,12 +221,13 @@ public class QueryEvaluatorTest {
 
     @Test
     public void canEvaluateCount() throws Exception {
-        JpqlCompiledStatement statement = compile("SELECT COUNT(bean) " + "FROM MethodAccessTestBean bean "
+        JpqlCompiledStatement statement = compile("SELECT COUNT(bean) FROM MethodAccessTestBean bean "
                                                   + "WHERE bean.name = :name ");
-        JpqlSelect selectStatement = (JpqlSelect)statement.getStatement().jjtGetChild(0);
-        JpqlSelectClause selectClause = (JpqlSelectClause)selectStatement.jjtGetChild(0);
-        JpqlFrom fromClause = (JpqlFrom)selectStatement.jjtGetChild(1);
-        JpqlWhere whereClause = (JpqlWhere)selectStatement.jjtGetChild(2);
+        JpqlParser.SelectStatementContext selectStatement =
+                (JpqlParser.SelectStatementContext)statement.getStatement().getChild(0);
+        JpqlParser.SelectClauseContext selectClause = (JpqlParser.SelectClauseContext)selectStatement.getChild(0);
+        JpqlParser.FromClauseContext fromClause = (JpqlParser.FromClauseContext)selectStatement.getChild(1);
+        JpqlParser.WhereClauseContext whereClause = (JpqlParser.WhereClauseContext)selectStatement.getChild(2);
 
         //InMemoryEvaluator may only evaluate whereClause when alias and named parameter are set
         assertFalse(queryEvaluator.canEvaluate(selectStatement, parameters));
@@ -282,8 +279,8 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    public void evaluateSubselect() throws Exception {
-        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean.name IN " + "(SELECT innerBean "
+    public void evaluateSubselect() {
+        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean.name IN (SELECT innerBean "
                                                   + " FROM MethodAccessTestBean innerBean)");
         aliases.put(new Alias("bean"), new MethodAccessTestBean("test"));
         try {
@@ -295,8 +292,8 @@ public class QueryEvaluatorTest {
     }
 
     @Test
-    public void evaluateSimpleCase() throws Exception {
-        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = " + "CASE bean.name WHEN :name THEN bean "
+    public void evaluateSimpleCase() throws NotEvaluatableException {
+        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = CASE bean.name WHEN :name THEN bean "
                                                   + "WHEN :name2 THEN bean ELSE NULL END");
         MethodAccessTestBean bean = new MethodAccessTestBean("test1");
         aliases.put(new Alias("bean"), bean);
@@ -376,7 +373,7 @@ public class QueryEvaluatorTest {
 
         SimpleSubselectEvaluator evaluator = new SimpleSubselectEvaluator();
         evaluator.setQueryEvaluator(queryEvaluator);
-        JpqlSubselect subselect = new QueryPreparator().createSubselect(statement);
+        JpqlParser.SubQueryContext subselect = new QueryPreparator().createSubselect(statement);
         Collection<?> result = evaluator.evaluate(compile(subselect), parameters);
         assertEquals(1, result.size());
         assertEquals(bean, result.iterator().next());
@@ -406,7 +403,7 @@ public class QueryEvaluatorTest {
 
         SimpleSubselectEvaluator evaluator = new SimpleSubselectEvaluator();
         evaluator.setQueryEvaluator(queryEvaluator);
-        JpqlSubselect subselect = new QueryPreparator().createSubselect(statement);
+        JpqlParser.SubQueryContext subselect = new QueryPreparator().createSubselect(statement);
         Collection<?> result = evaluator.evaluate(compile(subselect), parameters);
         assertEquals(1, result.size());
         assertEquals(bean, result.iterator().next());
@@ -426,8 +423,8 @@ public class QueryEvaluatorTest {
         JpqlCompiledStatement nullStatement
             = compile(SELECT + "LEFT OUTER JOIN bean.related related WHERE ENTRY(related) IS NULL AND bean = b");
         QueryPreparator queryPreparator = new QueryPreparator();
-        JpqlSubselect notNullSubselect = queryPreparator.createSubselect(notNullStatement);
-        JpqlSubselect nullSubselect = queryPreparator.createSubselect(nullStatement);
+        JpqlParser.SubQueryContext notNullSubselect = queryPreparator.createSubselect(notNullStatement);
+        JpqlParser.SubQueryContext nullSubselect = queryPreparator.createSubselect(nullStatement);
         JpqlCompiledStatement compiledNotNullSubselect = compile(notNullSubselect);
         JpqlCompiledStatement compiledNullSubselect = compile(nullSubselect);
         MethodAccessTestBean bean = new MethodAccessTestBean("bean");
@@ -484,7 +481,7 @@ public class QueryEvaluatorTest {
 
     @Test
     public void evaluateCase() throws Exception {
-        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = " + "CASE WHEN bean.name = :name THEN bean "
+        JpqlCompiledStatement statement = compile(SELECT + "WHERE bean = CASE WHEN bean.name = :name THEN bean "
                                                   + "WHEN bean.id = ?1 THEN bean ELSE NULL END");
         MethodAccessTestBean bean = new MethodAccessTestBean("test1");
         aliases.put(new Alias("bean"), bean);
@@ -580,8 +577,7 @@ public class QueryEvaluatorTest {
 
         //KEY(related) is not null, but KEY(related).name is not bean.name
         MethodAccessTestBean relatedKey = new MethodAccessTestBean("relatedKey");
-        aliases.put(new Alias("related"),
-                    Collections.<MethodAccessTestBean, MethodAccessTestBean>singletonMap(relatedKey, relatedValue));
+        aliases.put(new Alias("related"), Collections.singletonMap(relatedKey, relatedValue));
         assertFalse(evaluate(statement.getWhereClause(), parameters));
 
         //KEY(related).name = bean.name
@@ -822,7 +818,7 @@ public class QueryEvaluatorTest {
         JpqlCompiledStatement statement = compile(SELECT + "WHERE bean.id IN (?1, ?2)");
 
         aliases.clear();
-        positionalParameters.put(1, 0);
+        positionalParameters.put(0, 0);
         positionalParameters.put(1, 1);
         try {
             queryEvaluator.evaluate(statement.getWhereClause(), parameters);
@@ -992,25 +988,25 @@ public class QueryEvaluatorTest {
         assertFalse(evaluate(SELECT + "WHERE TRIM(TRAILING 'a' FROM 'test ') = 'test'", parameters));
     }
 
-    protected JpqlCompiledStatement compile(String query) throws ParseException {
-        JpqlStatement statement = parser.parseQuery(query);
+    private JpqlCompiledStatement compile(String query) {
+        JpqlParser.StatementContext statement = JpqlParsingHelper.parseQuery(query);
         return compile(statement);
     }
 
-    protected JpqlCompiledStatement compile(JpqlStatement statement) {
+    private JpqlCompiledStatement compile(JpqlParser.StatementContext statement) {
         return compiler.compile(statement);
     }
 
-    protected JpqlCompiledStatement compile(JpqlSubselect statement) {
+    private JpqlCompiledStatement compile(JpqlParser.SubQueryContext statement) {
         return compiler.compile(statement);
     }
 
-    protected boolean evaluate(String query, QueryEvaluationParameters parameters) throws NotEvaluatableException,
-                    ParseException {
+    private boolean evaluate(String query, QueryEvaluationParameters parameters) throws NotEvaluatableException {
         return evaluate(compile(query).getWhereClause(), parameters);
     }
 
-    protected boolean evaluate(JpqlWhere clause, QueryEvaluationParameters parameters) throws NotEvaluatableException {
+    private boolean evaluate(JpqlParser.WhereClauseContext clause, QueryEvaluationParameters parameters)
+            throws NotEvaluatableException {
         return queryEvaluator.<Boolean> evaluate(clause, parameters);
     }
 }

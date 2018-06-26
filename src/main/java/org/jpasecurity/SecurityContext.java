@@ -22,17 +22,32 @@ import java.util.Collection;
  * like authentication credentials and so.
  *
  * If the <tt>SecurityContext</tt> needs information about the configured
- * persistence information like entity mapping information or persistence properties,
- * it may also implement the
- * {@link org.jpasecurity.mapping.MappingInformationReceiver} interface
- * to get this information injected during runtime.
+ * persistence information like entity mapping information or persistence properties.
+ *
  * @author Arne Limburg
  */
 public interface SecurityContext {
 
     /**
+     * The current roles alias, <tt>CURRENT_ROLES</tt>.
+     */
+    Alias CURRENT_ROLES = new Alias("CURRENT_ROLES");
+
+    /**
+     * The current principal alias, <tt>CURRENT_PRINCIPAL</tt>.
+     */
+    Alias CURRENT_PRINCIPAL = new Alias("CURRENT_PRINCIPAL");
+
+    /**
+     * The current tenant alias, <tt>CURRENT_TENANT</tt>.
+     */
+    Alias CURRENT_TENANT = new Alias("CURRENT_TENANT");
+
+    /**
      * Returns a collection of all aliases that may be used in access rules,
      * i.e. <tt>CURRENT_PRINCIPAL</tt>, <tt>CURRENT_ROLES</tt> or <tt>CURRENT_TENANT</tt>.
+     *
+     * @return A collection of all aliases that may be used in access rules.
      */
     Collection<Alias> getAliases();
 
@@ -42,6 +57,9 @@ public interface SecurityContext {
      * that means if the value of an alias is a collection (i.e. <tt>CURRENT_ROLES</tt>)
      * or not. If the value of an alias is a collection, this method will not be called,
      * but {@link SecurityContext#getAliasValues(Alias)} will be called instead.
+     *
+     * @param alias the security rule alias
+     * @return The current value of the specified alias.
      */
     Object getAliasValue(Alias alias);
 
@@ -51,8 +69,12 @@ public interface SecurityContext {
      * if an alias is collection-valued, that means if the value of an alias
      * is a collection (i.e. <tt>CURRENT_ROLES</tt>) or not.
      * Only in the case that the alias is collection-valued,
-     * this method will be called,
-     * otherwise {@link #getAliasValue(Alias)} will be called.
+     * this method will be called, otherwise {@link #getAliasValue(Alias)}
+     * will be called.
+     *
+     * @param <T> the value type.
+     * @param alias the security rule alias
+     * @return The current value of the specified collection-valued alias.
      */
     <T> Collection<T> getAliasValues(Alias alias);
 }

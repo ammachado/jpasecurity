@@ -40,7 +40,7 @@ import javax.servlet.jsp.el.VariableResolver;
 @SuppressWarnings("deprecation")
 public class MockPageContext extends PageContext {
 
-    private Map<Integer, Map<String, Object>> attributes = new HashMap<Integer, Map<String, Object>>();
+    private Map<Integer, Map<String, Object>> attributes = new HashMap<>();
 
     public MockPageContext() {
         attributes.put(PageContext.PAGE_SCOPE, new HashMap<String, Object>());
@@ -49,30 +49,37 @@ public class MockPageContext extends PageContext {
         attributes.put(PageContext.APPLICATION_SCOPE, new HashMap<String, Object>());
     }
 
+    @Override
     public Object getAttribute(String name, int scope) {
         return attributes.get(scope).get(name);
     }
 
+    @Override
     public void removeAttribute(String name) {
         attributes.get(getAttributesScope(name)).remove(name);
     }
 
+    @Override
     public void removeAttribute(String name, int scope) {
         attributes.get(scope).remove(name);
     }
 
+    @Override
     public void setAttribute(String name, Object attribute) {
         setAttribute(name, attribute, PageContext.PAGE_SCOPE);
     }
 
+    @Override
     public void setAttribute(String name, Object o, int scope) {
         attributes.get(scope).put(name, o);
     }
 
+    @Override
     public Object getAttribute(String name) {
         return getAttribute(name, PageContext.PAGE_SCOPE);
     }
 
+    @Override
     public Object findAttribute(String name) {
         Object attribute;
         attribute = getAttribute(name, PageContext.PAGE_SCOPE);
@@ -90,21 +97,25 @@ public class MockPageContext extends PageContext {
         return getAttribute(name, PageContext.APPLICATION_SCOPE);
     }
 
+    @Override
     public Enumeration<String> getAttributeNamesInScope(final int scope) {
         return new Enumeration<String>() {
 
             private Iterator<String> iterator = attributes.get(scope).keySet().iterator();
 
+            @Override
             public boolean hasMoreElements() {
                 return iterator.hasNext();
             }
 
+            @Override
             public String nextElement() {
                 return iterator.next();
             }
         };
     }
 
+    @Override
     public int getAttributesScope(String name) {
         for (Map.Entry<Integer, Map<String, Object>> scope: attributes.entrySet()) {
             if (scope.getValue().containsKey(name)) {
@@ -114,50 +125,63 @@ public class MockPageContext extends PageContext {
         return 0;
     }
 
+    @Override
     public void forward(String relativeUrlPath) throws ServletException, IOException {
     }
 
+    @Override
     public Exception getException() {
         return null;
     }
 
+    @Override
     public JspWriter getOut() {
         return null;
     }
 
+    @Override
     public Object getPage() {
         return null;
     }
 
+    @Override
     public ServletRequest getRequest() {
         return null;
     }
 
+    @Override
     public ServletResponse getResponse() {
         return null;
     }
 
+    @Override
     public ServletConfig getServletConfig() {
         return null;
     }
 
+    @Override
     public ServletContext getServletContext() {
         return null;
     }
 
+    @Override
     public HttpSession getSession() {
         return null;
     }
 
+    @Override
     public void handlePageException(Exception e) throws ServletException, IOException {
     }
 
+    @Override
     public void handlePageException(Throwable arg0) throws ServletException, IOException {
     }
 
+    @Override
     public void include(String relativeUrlPath) throws ServletException, IOException {
     }
 
+    @Override
     public void initialize(Servlet servlet,
                            ServletRequest request,
                            ServletResponse response,
@@ -167,20 +191,25 @@ public class MockPageContext extends PageContext {
                            boolean autoFlush) throws IOException {
     }
 
+    @Override
     public void release() {
     }
 
+    @Override
     public void include(String arg0, boolean arg1) throws ServletException, IOException {
     }
 
+    @Override
     public ELContext getELContext() {
         return null;
     }
 
+    @Override
     public ExpressionEvaluator getExpressionEvaluator() {
         return null;
     }
 
+    @Override
     public VariableResolver getVariableResolver() {
         return null;
     }

@@ -17,27 +17,21 @@ package org.jpasecurity.jpql.compiler;
 
 import static org.junit.Assert.assertNotNull;
 
-import java.util.Collections;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
-
+import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.contacts.model.User;
-import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 
 /**
  * @author Michael Kotten
  */
-@Ignore
 public class NotEqualsTest {
+
+    @Rule
+    public final TestEntityManager entityManager = new TestEntityManager("not-equals");
 
     @Test(expected = SecurityException.class)
     public void testNotEquals() {
-        EntityManagerFactory factory = Persistence.createEntityManagerFactory("not-equals", Collections.emptyMap());
-        assertNotNull(factory);
-        EntityManager entityManager = factory.createEntityManager();
         assertNotNull(entityManager);
         entityManager.getTransaction().begin();
         User user = new User("user");

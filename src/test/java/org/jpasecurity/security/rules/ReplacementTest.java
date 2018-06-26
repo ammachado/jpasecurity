@@ -27,7 +27,7 @@ import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.model.MethodAccessAnnotationTestBean;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -35,8 +35,8 @@ import org.junit.Test;
  */
 public class ReplacementTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("grandparent-grandchild");
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("grandparent-grandchild");
 
     private MethodAccessAnnotationTestBean grandparent;
 
@@ -44,33 +44,33 @@ public class ReplacementTest {
 
     @Before
     public void createTestData() {
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         grandparent = new MethodAccessAnnotationTestBean();
-        entityManager.persist(grandparent);
+        ENTITY_MANAGER.persist(grandparent);
         MethodAccessAnnotationTestBean parent = new MethodAccessAnnotationTestBean();
         parent.setParent(grandparent);
-        entityManager.persist(parent);
+        ENTITY_MANAGER.persist(parent);
         grandchild = new MethodAccessAnnotationTestBean();
         grandchild.setParent(parent);
-        entityManager.persist(grandchild);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
-        grandparent = entityManager.find(MethodAccessAnnotationTestBean.class, grandparent.getId());
-        entityManager.clear();
+        ENTITY_MANAGER.persist(grandchild);
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
+        grandparent = ENTITY_MANAGER.find(MethodAccessAnnotationTestBean.class, grandparent.getId());
+        ENTITY_MANAGER.clear();
     }
 
     @Test
     public void canUpdateGrandchild() {
         TestSecurityContext.register(new Alias("CURRENT_GRANDPARENT"), grandparent);
 
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         MethodAccessAnnotationTestBean foundGrandchild
-            = entityManager.find(MethodAccessAnnotationTestBean.class, grandchild.getId());
+            = ENTITY_MANAGER.find(MethodAccessAnnotationTestBean.class, grandchild.getId());
         foundGrandchild.setName("grandchild");
-        entityManager.getTransaction().commit();
-        entityManager.clear();
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
 
-        foundGrandchild = entityManager.find(MethodAccessAnnotationTestBean.class, grandchild.getId());
+        foundGrandchild = ENTITY_MANAGER.find(MethodAccessAnnotationTestBean.class, grandchild.getId());
         assertThat(foundGrandchild.getName(), is("grandchild"));
     }
 
@@ -78,12 +78,12 @@ public class ReplacementTest {
     public void cannotUpdateGrandparent() {
         TestSecurityContext.register(new Alias("CURRENT_GRANDPARENT"), grandparent);
 
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         MethodAccessAnnotationTestBean foundGrandparent
-            = entityManager.find(MethodAccessAnnotationTestBean.class, grandparent.getId());
+            = ENTITY_MANAGER.find(MethodAccessAnnotationTestBean.class, grandparent.getId());
         foundGrandparent.setName("grandparent");
         try {
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.getTransaction().commit();
             fail("expected PersistenceException");
         } catch (PersistenceException e) {
             assertThat(e.getCause(), is(instanceOf(SecurityException.class)));

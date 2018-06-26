@@ -21,13 +21,14 @@ import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.ForeignKey;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.ForeignKey;
 
 /**
  *
@@ -38,14 +39,14 @@ import org.hibernate.annotations.ForeignKey;
 @DiscriminatorColumn(name = "process_definition_discriminator_id", discriminatorType = DiscriminatorType.INTEGER)
 public class ProcessTaskInstance extends AbstractEntity<Integer> {
 
-    String description;
+    private String description;
 
-    Integer sequence;
+    private Integer sequence;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @ForeignKey(name = "FK_pti_assigned_employee_employee_id")
+    @JoinColumn(foreignKey = @ForeignKey(name = "FK_pti_assigned_employee_employee_id"))
     @Fetch(FetchMode.JOIN)
-    Employee assignedEmployee;
+    private Employee assignedEmployee;
 
     @OneToMany(mappedBy = "processTaskInstance", fetch = FetchType.LAZY)
     private List<ProcessInstanceProcessTaskInstance> processInstanceProcessTaskInstances;
@@ -85,7 +86,7 @@ public class ProcessTaskInstance extends AbstractEntity<Integer> {
 
     public List<ProcessInstanceProcessTaskInstance> getProcessInstanceProcessTaskInstances() {
         if (processInstanceProcessTaskInstances == null) {
-            processInstanceProcessTaskInstances = new ArrayList<ProcessInstanceProcessTaskInstance>();
+            processInstanceProcessTaskInstances = new ArrayList<>();
         }
         return processInstanceProcessTaskInstances;
     }

@@ -83,7 +83,7 @@ public final class ManagedTypeFilter {
     }
 
     public Collection<ManagedType<?>> filterAll(Class<?> type) {
-        Set<ManagedType<?>> filteredTypes = new HashSet<ManagedType<?>>();
+        Set<ManagedType<?>> filteredTypes = new HashSet<>();
         for (ManagedType<?> managedType: metamodel.getManagedTypes()) {
             if (type.isAssignableFrom(managedType.getJavaType())) {
                 filteredTypes.add(managedType);
@@ -93,7 +93,7 @@ public final class ManagedTypeFilter {
     }
 
     public Collection<EntityType<?>> filterEntities(Class<?> type) {
-        Set<EntityType<?>> filteredTypes = new HashSet<EntityType<?>>();
+        Set<EntityType<?>> filteredTypes = new HashSet<>();
         for (ManagedType<?> managedType: metamodel.getManagedTypes()) {
             if (type.isAssignableFrom(managedType.getJavaType()) && (managedType instanceof EntityType)) {
                 filteredTypes.add((EntityType<?>)managedType);

@@ -42,6 +42,4 @@ public class InMemoryEvaluationParameters extends QueryEvaluationParameters {
              parameters.getNamedParameters(),
              parameters.getPositionalParameters());
     }
-
 }
-

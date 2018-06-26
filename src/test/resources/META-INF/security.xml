@@ -1,7 +1,7 @@
 <security xmlns="http://jpasecurity.sf.net/xml/ns/security"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://jpasecurity.sf.net/xml/ns/security http://jpasecurity.sf.net/xml/ns/security/security_1_0.xsd"
-          version="1.0">
+          schemaVersion="1.0">
   <persistence-unit name="interface">
     <access-rule>
       GRANT ACCESS TO org.jpasecurity.model.TestInterface t WHERE t.name = CURRENT_PRINCIPAL 
@@ -69,13 +69,12 @@
 
   <persistence-unit name="with-clause">
      <access-rule>
-       GRANT ACCESS TO MethodAccessAnnotationTestBean bean
-         WHERE 'admin' in (CURRENT_ROLES)
+       GRANT ACCESS TO MethodAccessAnnotationTestBean bean WHERE 'admin' in (CURRENT_ROLES)
      </access-rule>
     <access-rule>
       GRANT ACCESS TO MethodAccessAnnotationTestBean b
         WHERE EXISTS (SELECT bean FROM MethodAccessAnnotationTestBean bean JOIN bean.parent parent
-                      WITH parent.name = 'user2' WHERE b = bean AND bean.name = CURRENT_PRINCIPAL)
+                      ON (parent.name = 'user2') WHERE b = bean AND bean.name = CURRENT_PRINCIPAL)
     </access-rule>
   </persistence-unit>
 

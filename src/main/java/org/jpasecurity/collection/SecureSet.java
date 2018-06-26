@@ -20,6 +20,7 @@ import java.util.Set;
 
 /**
  * A set-implementation of secure collection.
+ *
  * @author Arne Limburg
  */
 public class SecureSet<E> extends AbstractSecureCollection<E, Set<E>> implements Set<E> {
@@ -32,7 +33,8 @@ public class SecureSet<E> extends AbstractSecureCollection<E, Set<E>> implements
         super(original, filtered);
     }
 
+    @Override
     protected Set<E> createFiltered() {
-        return new LinkedHashSet<E>();
+        return new LinkedHashSet<>();
     }
 }

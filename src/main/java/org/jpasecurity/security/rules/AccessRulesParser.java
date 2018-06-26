@@ -29,24 +29,18 @@ import javax.persistence.PersistenceException;
 import javax.persistence.metamodel.ManagedType;
 import javax.persistence.metamodel.Metamodel;
 
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.jpasecurity.AccessType;
 import org.jpasecurity.Alias;
-import org.jpasecurity.Path;
 import org.jpasecurity.SecurityContext;
 import org.jpasecurity.jpql.compiler.QueryPreparator;
-import org.jpasecurity.jpql.parser.JpqlAccessRule;
-import org.jpasecurity.jpql.parser.JpqlFromItem;
-import org.jpasecurity.jpql.parser.JpqlInnerJoin;
-import org.jpasecurity.jpql.parser.JpqlKeywords;
-import org.jpasecurity.jpql.parser.JpqlOuterJoin;
 import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.JpqlPath;
-import org.jpasecurity.jpql.parser.JpqlSelectExpressions;
-import org.jpasecurity.jpql.parser.JpqlSubselect;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
+import org.jpasecurity.jpql.parser.ToStringVisitor;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
-import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.Node;
-import org.jpasecurity.jpql.parser.ParseException;
+import org.jpasecurity.jpql.parser.JpqlKeywords;
 import org.jpasecurity.security.AccessRule;
 import org.jpasecurity.security.Permit;
 import org.jpasecurity.security.PermitAny;
@@ -56,15 +50,12 @@ import org.jpasecurity.util.ListMap;
 public class AccessRulesParser {
 
     private static final Alias THIS_ALIAS = new Alias("this");
-    private final JpqlParser jpqlParser = new JpqlParser();
-    private final AliasVisitor aliasVisitor = new AliasVisitor();
     private Metamodel metamodel;
     private SecurityContext securityContext;
     private AccessRulesProvider accessRulesProvider;
     private AccessRulesCompiler compiler;
 
-    public AccessRulesParser(String persistenceUnitName,
-                             Metamodel metamodel,
+    public AccessRulesParser(Metamodel metamodel,
                              SecurityContext securityContext,
                              AccessRulesProvider accessRulesProvider) {
         this.metamodel = notNull(Metamodel.class, metamodel);
@@ -75,29 +66,34 @@ public class AccessRulesParser {
 
     public Collection<AccessRule> parseAccessRules() {
         try {
-            Set<AccessRule> rules = new HashSet<AccessRule>();
+            Set<AccessRule> rules = new HashSet<>();
             ListMap<Class<?>, Permit> permissions = parsePermissions();
             for (Map.Entry<Class<?>, List<Permit>> annotations: permissions.entrySet()) {
                 for (Permit permission: annotations.getValue()) {
-                    rules.addAll(compiler.compile(createAccessRule(annotations.getKey(), permission)));
+                    final JpqlParser.AccessRuleContext accessRule = createAccessRule(annotations.getKey(), permission);
+                    final Collection<AccessRule> compiledAccessRules = compiler.compile(accessRule);
+                    rules.addAll(compiledAccessRules);
                 }
             }
             for (String rule: accessRulesProvider.getAccessRules()) {
-                rules.addAll(compiler.compile(jpqlParser.parseRule(rule)));
+                final JpqlParser.AccessRuleContext accessRule = JpqlParsingHelper.parseAccessRule(rule);
+                final Collection<AccessRule> compiledAccessRules = compiler.compile(accessRule);
+                rules.addAll(compiledAccessRules);
             }
             return rules;
-        } catch (ParseException e) {
+        } catch (RecognitionException | ParseCancellationException e) {
             throw new PersistenceException(e);
         }
     }
 
-    private JpqlAccessRule createAccessRule(Class<?> type, Permit permission) throws ParseException {
+    private JpqlParser.AccessRuleContext createAccessRule(Class<?> type, Permit permission) {
         Alias alias = new Alias(Introspector.decapitalize(type.getSimpleName()));
-        JpqlWhere whereClause = null;
+        Set<Alias> declaredAliases = new HashSet<>();
+        JpqlParser.WhereClauseContext whereClause = null;
         if (permission.where().trim().length() > 0) {
-            whereClause = jpqlParser.parseWhereClause("WHERE " + permission.where());
+            whereClause = JpqlParsingHelper.parseWhereClause("WHERE " + permission.where());
             alias = findUnusedAlias(whereClause, alias);
-            appendAlias(whereClause, alias);
+            appendAlias(whereClause, alias, declaredAliases);
         }
         StringBuilder rule = new StringBuilder("GRANT ");
         List<AccessType> access = Arrays.asList(permission.access());
@@ -117,13 +113,14 @@ public class AccessRulesParser {
         rule.append(type.getName()).append(' ');
         rule.append(alias);
         if (whereClause != null) {
-            rule.append(' ').append(whereClause);
+            ToStringVisitor toStringVisitor = new ToStringVisitor();
+            rule.append(' ').append(toStringVisitor.visit(whereClause));
         }
-        return jpqlParser.parseRule(rule.toString());
+        return JpqlParsingHelper.parseAccessRule(rule.toString());
     }
 
     private ListMap<Class<?>, Permit> parsePermissions() {
-        ListMap<Class<?>, Permit> permissions = new ListHashMap<Class<?>, Permit>();
+        ListMap<Class<?>, Permit> permissions = new ListHashMap<>();
         for (ManagedType<?> managedType: metamodel.getManagedTypes()) {
             Class<?> type = managedType.getJavaType();
             Permit permit = type.getAnnotation(Permit.class);
@@ -138,76 +135,75 @@ public class AccessRulesParser {
         return permissions;
     }
 
-    private Alias findUnusedAlias(JpqlWhere whereClause, Alias alias) {
-        Set<Alias> declaredAliases = new HashSet<Alias>();
-        whereClause.visit(aliasVisitor, declaredAliases);
+    private Alias findUnusedAlias(JpqlParser.WhereClauseContext whereClause, Alias alias) {
+        AliasVisitor aliasVisitor = new AliasVisitor();
+        Set<Alias> aliases = aliasVisitor.visit(whereClause);
         int i = 0;
-        while (declaredAliases.contains(alias) || JpqlKeywords.ALL.contains(alias.toString().toUpperCase())) {
+        while (aliases.contains(alias) || JpqlKeywords.ALL.contains(alias.toString().toUpperCase())) {
             alias = new Alias(alias.getName() + i);
             i++;
         }
         return alias;
     }
 
-    private void appendAlias(JpqlWhere whereClause, Alias alias) {
-        PathVisitor pathVisitor = new PathVisitor(alias);
-        whereClause.visit(pathVisitor, new HashSet<Alias>());
+    private void appendAlias(JpqlParser.WhereClauseContext whereClause, Alias alias, Set<Alias> declaredAliases) {
+        PathVisitor pathVisitor = new PathVisitor(alias, declaredAliases);
+        pathVisitor.visit(whereClause);
     }
 
-    private class AliasVisitor extends JpqlVisitorAdapter<Set<Alias>> {
+    private static class AliasVisitor extends JpqlVisitorAdapter<Set<Alias>> {
 
-        public boolean visit(JpqlSelectExpressions select) {
-            return false;
+        AliasVisitor() {
+            super(new HashSet<Alias>());
         }
 
-        public boolean visit(JpqlFromItem from, Set<Alias> declaredAliases) {
-            return visitAlias(from, declaredAliases);
+        @Override
+        public Set<Alias> visitIdentificationVariableDef(JpqlParser.IdentificationVariableDefContext ctx) {
+            defaultResult().add(new Alias(ctx.getText()));
+            return stopVisitingChildren();
         }
 
-        public boolean visit(JpqlInnerJoin join, Set<Alias> declaredAliases) {
-            return visitAlias(join, declaredAliases);
-        }
-
-        public boolean visit(JpqlOuterJoin join, Set<Alias> declaredAliases) {
-            return visitAlias(join, declaredAliases);
-        }
-
-        public boolean visitAlias(Node node, Set<Alias> declaredAliases) {
-            if (node.jjtGetNumChildren() == 2) {
-                declaredAliases.add(new Alias(node.jjtGetChild(1).getValue().toLowerCase()));
+        Set<Alias> visitAlias(ParserRuleContext node) {
+            if (node.getChildCount() == 2) {
+                defaultResult().add(new Alias(node.getChild(1).getText().toLowerCase()));
             }
-            return false;
+            return stopVisitingChildren();
         }
     }
 
-    private class PathVisitor extends JpqlVisitorAdapter<Set<Alias>> {
+    private static class PathVisitor extends JpqlVisitorAdapter<Set<Alias>> {
 
-        private final Alias alias;
         private final QueryPreparator queryPreparator = new QueryPreparator();
+        private final Alias alias;
 
-        PathVisitor(Alias alias) {
+        PathVisitor(Alias alias, Set<Alias> declaredAliases) {
+            super(declaredAliases);
             this.alias = alias;
         }
 
-        public boolean visit(JpqlSubselect select, Set<Alias> declaredAliases) {
-            Set<Alias> subselectAliases = new HashSet<Alias>(declaredAliases);
-            select.visit(aliasVisitor, subselectAliases);
-            for (int i = 0; i < select.jjtGetNumChildren(); i++) {
-                select.jjtGetChild(i).visit(this, subselectAliases);
+        @Override
+        public Set<Alias> visitSubQuery(JpqlParser.SubQueryContext select) {
+            AliasVisitor aliasVisitor = new AliasVisitor();
+            aliasVisitor.visit(select);
+            for (int i = 0; i < select.getChildCount(); i++) {
+                aliasVisitor.visit(select.getChild(i));
             }
-            return false;
+            return stopVisitingChildren();
         }
 
-        public boolean visit(JpqlPath path, Set<Alias> declaredAliases) {
-            Alias a = new Alias(path.jjtGetChild(0).getValue().toLowerCase());
+        /*
+        @Override
+        public Set<Alias> visitSimpleSubPath(JpqlParser.SimpleSubPathContext path) {
+            Alias a = new Alias(path.getChild(0).getText().toLowerCase());
             if (THIS_ALIAS.equals(a)) {
-                queryPreparator.replace(path.jjtGetChild(0), queryPreparator.createIdentificationVariable(alias));
-            } else if (!declaredAliases.contains(a)
-                && (path.jjtGetNumChildren() > 1 || (!securityContext.getAliases().contains(a)))
+                queryPreparator.replace(path.getChild(0), queryPreparator.createIdentificationVariable(alias));
+            } else if (!defaultResult().contains(a)
+                && (path.getChildCount() > 1 || (!securityContext.getAliases().contains(a)))
                 && (!new Path(path.toString()).isEnumValue())) {
                 queryPreparator.prepend(alias.toPath(), path);
             }
-            return false;
+            return stopVisitingChildren();
         }
+        */
     }
 }

@@ -15,111 +15,80 @@
  */
 package org.jpasecurity.jpql.compiler;
 
-import java.beans.Introspector;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.persistence.metamodel.EntityType;
-
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.RuleNode;
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
+import org.jpasecurity.jpql.BaseContext;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
-import org.jpasecurity.jpql.parser.JpqlAbstractSchemaName;
-import org.jpasecurity.jpql.parser.JpqlAnd;
-import org.jpasecurity.jpql.parser.JpqlBooleanLiteral;
-import org.jpasecurity.jpql.parser.JpqlBrackets;
-import org.jpasecurity.jpql.parser.JpqlCollectionValuedPath;
-import org.jpasecurity.jpql.parser.JpqlConstructorParameter;
-import org.jpasecurity.jpql.parser.JpqlEquals;
-import org.jpasecurity.jpql.parser.JpqlFrom;
-import org.jpasecurity.jpql.parser.JpqlFromItem;
-import org.jpasecurity.jpql.parser.JpqlIdentificationVariable;
-import org.jpasecurity.jpql.parser.JpqlIdentificationVariableDeclaration;
-import org.jpasecurity.jpql.parser.JpqlIn;
-import org.jpasecurity.jpql.parser.JpqlIntegerLiteral;
-import org.jpasecurity.jpql.parser.JpqlIsNull;
-import org.jpasecurity.jpql.parser.JpqlKey;
-import org.jpasecurity.jpql.parser.JpqlNamedInputParameter;
-import org.jpasecurity.jpql.parser.JpqlNot;
-import org.jpasecurity.jpql.parser.JpqlNotEquals;
-import org.jpasecurity.jpql.parser.JpqlOr;
-import org.jpasecurity.jpql.parser.JpqlParserConstants;
-import org.jpasecurity.jpql.parser.JpqlParserTreeConstants;
-import org.jpasecurity.jpql.parser.JpqlPath;
-import org.jpasecurity.jpql.parser.JpqlSelectClause;
-import org.jpasecurity.jpql.parser.JpqlSelectExpression;
-import org.jpasecurity.jpql.parser.JpqlSelectExpressions;
-import org.jpasecurity.jpql.parser.JpqlSubselect;
-import org.jpasecurity.jpql.parser.JpqlType;
-import org.jpasecurity.jpql.parser.JpqlValue;
+import org.jpasecurity.jpql.TreeRewriteSupport;
+import org.jpasecurity.jpql.parser.JpqlParser;
+import org.jpasecurity.jpql.parser.JpqlParser.AndPredicateContext;
+import org.jpasecurity.jpql.parser.JpqlParser.ExpressionContext;
+import org.jpasecurity.jpql.parser.JpqlParser.GroupedExpressionContext;
+import org.jpasecurity.jpql.parser.JpqlParser.GroupedPredicateContext;
+import org.jpasecurity.jpql.parser.JpqlParser.InequalityPredicateContext;
+import org.jpasecurity.jpql.parser.JpqlParser.OrPredicateContext;
+import org.jpasecurity.jpql.parser.JpqlParser.PredicateContext;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
-import org.jpasecurity.jpql.parser.JpqlWhere;
-import org.jpasecurity.jpql.parser.JpqlWith;
-import org.jpasecurity.jpql.parser.Node;
-import org.jpasecurity.jpql.parser.SimpleNode;
+
+import javax.persistence.metamodel.EntityType;
+import java.util.List;
 
 /**
  * @author Arne Limburg
  */
 public class QueryPreparator {
 
-    private final PathReplacer pathReplacer = new PathReplacer();
-    private final ConstructorReplacer constructorReplacer = new ConstructorReplacer();
-
     /**
-     * Removes the specified <tt>With</tt>-node from its parent
-     * and appends the condition to the <tt>Where</tt>-node of the specified subselect.
-     * @param where the where-node
-     * @param with the with-node
+     * Removes the specified <tt>With</tt>-BaseContext from its parent
+     * and appends the condition to the <tt>Where</tt>-BaseContext of the specified subselect.
+     *
+     * @param subQuery the sub query node.
+     * @param with     the with-node
+     * @deprecated JPA 2.1 supports qualified join predicates.
      */
-    public void appendToWhereClause(JpqlSubselect subselect, JpqlWith with) {
-        JpqlWhere where = new JpqlCompiledStatement(subselect).getWhereClause();
-        with.jjtGetParent().jjtRemoveChild(2);
-        Node condition = with.jjtGetChild(0);
-        if (where == null) {
-            where = createWhere(condition);
-            appendChildren(subselect, where);
-        } else {
-            append(where, condition);
-        }
+    @Deprecated
+    public void appendToWhereClause(JpqlParser.SubQueryContext subQuery,
+                                    JpqlParser.QualifiedJoinPredicateContext with) {
+        throw new UnsupportedOperationException("JPA 2.1 supports qualified join predicates.");
     }
 
     /**
-     * Appends the specified node to the specified <tt>Where</tt>-node with <tt>and</tt>.
+     * Appends the specified BaseContext to the specified <tt>Where</tt>-BaseContext with <tt>and</tt>.
+     *
      * @param where the <tt>Where</tt>-node
-     * @param node the node
+     * @param node  the node
      */
-    public void append(JpqlWhere where, Node node) {
-        Node clause = where.jjtGetChild(0);
-        if (!(clause instanceof JpqlBrackets)) {
-            clause = createBrackets(clause);
-            clause.jjtSetParent(where);
-        }
-        Node and = createAnd(clause, node);
-        and.jjtSetParent(where);
-        where.jjtSetChild(and, 0);
+    public void append(JpqlParser.WhereClauseContext where, BaseContext node) {
+        new AppendWhereClauseVisitor(where).visit(node);
     }
 
     /**
-     * Appends the specified access rule to the specified node with <tt>or</tt>.
-     * @param node the node
-     * @param alias the alias to be selected from the access rule
+     * Appends the specified access rule to the specified BaseContext with <tt>or</tt>.
+     *
+     * @param node      the node
+     * @param alias     the alias to be selected from the access rule
      * @param statement the access rule
      * @return the <tt>Or</tt>-node.
      */
-    public Node append(Node node, Path alias, JpqlCompiledStatement statement) {
-        Node in = createBrackets(createIn(alias, statement));
-        Node or = createOr(node, in);
-        return or;
+    public OrPredicateContext append(BaseContext node, Path alias, JpqlCompiledStatement statement) {
+        final BaseContext in = createIn(alias, statement);
+        return createOr((PredicateContext)node, (PredicateContext)in);
     }
 
     /**
      * Prepends the specified path to the specified pathNode.
-     * @param alias the alias
-     * @param path the path
+     *
+     * @param path     the path
+     * @param pathNode the new node
      * @return the new path
      */
-    public JpqlPath prepend(Path path, JpqlPath pathNode) {
+    public static JpqlParser.PathContext prepend(Path path, JpqlParser.PathContext pathNode) {
         Alias alias = path.getRootAlias();
         String[] subpathComponents = path.getSubpathComponents();
         String[] pathComponents = new String[subpathComponents.length + 1];
@@ -128,152 +97,178 @@ public class QueryPreparator {
         return prepend(pathComponents, pathNode, path.isKeyPath(), path.isValuePath());
     }
 
-    private JpqlPath prepend(String[] pathComponents, JpqlPath path, boolean isKeyPath, boolean isValuePath) {
+    private static JpqlParser.PathContext prepend(String[] pathComponents,
+                                                 JpqlParser.PathContext path,
+                                                 boolean isKeyPath,
+                                                 boolean isValuePath) {
         if (pathComponents.length == 0) {
             return path;
         }
-        for (int i = path.jjtGetNumChildren() - 1; i >= 0; i--) {
-            path.jjtAddChild(path.jjtGetChild(i), i + pathComponents.length);
+        for (int i = path.getChildCount() - 1; i >= 0; i--) {
+            path.addChild((RuleContext)path.getChild(i));
         }
-        if (path.jjtGetNumChildren() > pathComponents.length) {
+        if (path.getChildCount() > pathComponents.length) {
+            ParseTree oldVariable = path.getChild(pathComponents.length);
+            TreeRewriteSupport.setChild(
+                    path,
+                    pathComponents.length,
+                    createIdentificationVariable(new Alias(oldVariable.getText()))
+            );
+        }
+        /*
+        if (path.getChildCount() > pathComponents.length) {
             //Replace first identification variable with identifier
-            Node oldVariable = path.jjtGetChild(pathComponents.length);
-            path.jjtSetChild(createIdentificationVariable(new Alias(oldVariable.getValue())), pathComponents.length);
+            BaseContext oldVariable = path.getChild(pathComponents.length);
+            path.setChild(createIdentificationVariable(new Alias(oldVariable.getValue())), pathComponents.length);
         }
-        path.jjtAddChild(createVariable(pathComponents[0]), 0);
+        path.addChild(createVariable(pathComponents[0]), 0);
         for (int i = 1; i < pathComponents.length; i++) {
-            path.jjtAddChild(createIdentificationVariable(new Alias(pathComponents[i])), i);
+            path.addChild(createIdentificationVariable(new Alias(pathComponents[i])), i);
         }
         if (isKeyPath) {
-            path.jjtSetChild(createKey(path.jjtGetChild(0)), 0);
+            path.setChild(createKey(path.getChild(0)), 0);
         }
         if (isValuePath) {
-            path.jjtSetChild(createValue(path.jjtGetChild(0)), 0);
+            path.setChild(createValue(path.getChild(0)), 0);
         }
         return path;
+        */
+
+        throw new UnsupportedOperationException();
     }
 
     /**
-     * Creates a <tt>JpqlKey</tt> node.
+     * Creates a <tt>JpqlParser.MapKeyPathRootContext</tt> node.
      */
-    public JpqlKey createKey(Node child) {
+    public JpqlParser.MapKeyPathRootContext createKey(BaseContext child) {
+        throw new UnsupportedOperationException();
+        /*
         JpqlKey key = new JpqlKey(JpqlParserTreeConstants.JJTKEY);
-        child.jjtSetParent(key);
-        key.jjtAddChild(child, 0);
+        child.setParent(key);
+        key.addChild(child, 0);
         return key;
+        */
     }
 
     /**
-     * Creates a <tt>JpqlKey</tt> node.
+     * Creates a <tt>JpqlParser.CollectionValuePathRootContext</tt> node.
      */
-    public JpqlValue createValue(Node child) {
+    public JpqlParser.CollectionValuePathRootContext createValue(BaseContext child) {
+        throw new UnsupportedOperationException();
+        /*
         JpqlValue value = new JpqlValue(JpqlParserTreeConstants.JJTVALUE);
-        child.jjtSetParent(value);
-        value.jjtAddChild(child, 0);
+        child.setParent(value);
+        value.addChild(child, 0);
         return value;
+        */
     }
 
     /**
      * Creates a <tt>JpqlWhere</tt> node.
      */
-    public JpqlWhere createWhere(Node child) {
-        JpqlWhere where = new JpqlWhere(JpqlParserTreeConstants.JJTWHERE);
-        child.jjtSetParent(where);
-        where.jjtAddChild(child, 0);
-        return where;
+    public JpqlParser.WhereClauseContext createWhere(BaseContext child) {
+        return JpqlParsingHelper.parseWhereClause(String.format("WHERE %s", child.toJpqlString()));
     }
 
     /**
-     * Creates a <tt>JpqlBooleanLiteral</tt> node with the specified value.
+     * Creates a <tt>JpqlBooleanLiteral</tt> BaseContext with the specified value.
      */
-    public JpqlBooleanLiteral createBoolean(boolean value) {
-        JpqlBooleanLiteral bool = new JpqlBooleanLiteral(JpqlParserTreeConstants.JJTBOOLEANLITERAL);
-        bool.setValue(Boolean.toString(value));
-        return bool;
+    public JpqlParser.PredicateContext createBoolean(boolean value) {
+        return value ? createOneEqualsOne() : createOneNotEqualsOne();
     }
 
     /**
-     * Creates a <tt>JpqlIntegerLiteral</tt> node with the specified value.
+     * Creates a <tt>JpqlIntegerLiteral</tt> BaseContext with the specified value.
      */
-    public JpqlIntegerLiteral createNumber(int value) {
-        JpqlIntegerLiteral integer = new JpqlIntegerLiteral(JpqlParserTreeConstants.JJTINTEGERLITERAL);
-        integer.setValue(Integer.toString(value));
-        return integer;
+    public JpqlParser.PredicateContext createNumber(int value) {
+        return JpqlParsingHelper.createParser(String.valueOf(value)).predicate();
     }
 
     /**
-     * Creates a <tt>JpqlIdentificationVariable</tt> node with the specified value.
+     * Creates a <tt>JpqlIdentificationVariable</tt> BaseContext with the specified value.
      */
-    public JpqlIdentificationVariable createVariable(String value) {
+    public JpqlParser.IdentificationVariableContext createVariable(String value) {
+        throw new UnsupportedOperationException();
+        /*
         JpqlIdentificationVariable variable
-            = new JpqlIdentificationVariable(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLE);
+            = new JpqlParser.IdentificationVariable(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLE);
         variable.setValue(value);
         return variable;
+        */
     }
 
     /**
-     * Creates a <tt>JpqlNamedInputParameter</tt> node with the specified name.
+     * Creates a <tt>JpqlNamedInputParameter</tt> BaseContext with the specified name.
      */
-    public JpqlNamedInputParameter createNamedParameter(String name) {
-        return appendChildren(new JpqlNamedInputParameter(JpqlParserTreeConstants.JJTNAMEDINPUTPARAMETER),
-                              createVariable(name));
+    public JpqlParser.ExpressionContext createNamedParameter(String name) {
+        return JpqlParsingHelper.createParser(String.format(":%s", name)).expression();
     }
 
     /**
-     * Connects the specified node with <tt>JpqlAnd</tt>.
+     * Connects the specified BaseContext with <tt>JpqlAnd</tt>.
      */
-    public Node createAnd(Node node1, Node node2) {
-        return appendChildren(new JpqlAnd(JpqlParserTreeConstants.JJTAND), node1, node2);
+    public static <T extends PredicateContext, U extends PredicateContext> AndPredicateContext createAnd(T ctx1, U  ctx2) {
+        String predicate = String.format("%s AND %s", ctx1.toJpqlString(), ctx2.toJpqlString());
+        return (AndPredicateContext) JpqlParsingHelper.createParser(predicate).predicate();
     }
 
     /**
-     * Connects the specified node with <tt>JpqlOr</tt>.
+     * Connects the specified ParserRuleContext with <tt>JpqlOr</tt>.
      */
-    public Node createOr(Node node1, Node node2) {
-        return appendChildren(new JpqlOr(JpqlParserTreeConstants.JJTOR), node1, node2);
+    public static <T extends PredicateContext, U extends PredicateContext> OrPredicateContext createOr(T ctx1, U  ctx2) {
+        String predicate = String.format("%s OR %s", ctx1.toJpqlString(), ctx2.toJpqlString());
+        return (OrPredicateContext) JpqlParsingHelper.createParser(predicate).predicate();
     }
 
     /**
      * Creates an impliciation, that means: <tt>if (and only if) node1 then node2</tt>.
      */
-    public Node createImplication(Node node1, Node node2) {
-        return createOr(createNot(createBrackets(node1)), node2);
+    public static <T extends PredicateContext, U extends PredicateContext> OrPredicateContext createImplication(
+            T ctx1, U ctx2) {
+        String predicate = String.format("(NOT %s) OR %s", ctx1, ctx2);
+        return (OrPredicateContext) JpqlParsingHelper.createParser(predicate).predicate();
     }
 
-    public Node createNot(Node node) {
-        return appendChildren(new JpqlNot(JpqlParserTreeConstants.JJTNOT), node);
+    public static <T extends PredicateContext> JpqlParser.NegatedPredicateContext createNot(T ctx) {
+        String predicate = String.format("NOT %s", ctx);
+        return (JpqlParser.NegatedPredicateContext) JpqlParsingHelper.createParser(predicate).predicate();
     }
 
-    public Node createIsNull(Node node) {
-        return appendChildren(new JpqlIsNull(JpqlParserConstants.NULL), node);
+    public JpqlParser.IsNullPredicateContext createIsNull(ExpressionContext ctx) {
+        return createIsNullPredicate(ctx, false);
     }
 
-    public Node createIsNotNull(Node node) {
-        return createNot(createIsNull(node));
-    }
-
-    /**
-     * Connects the specified node with <tt>JpqlEquals</tt>.
-     */
-    public Node createEquals(Node node1, Node node2) {
-        return appendChildren(new JpqlEquals(JpqlParserTreeConstants.JJTEQUALS), node1, node2);
+    public JpqlParser.IsNullPredicateContext createIsNotNull(ExpressionContext ctx) {
+        return createIsNullPredicate(ctx, true);
     }
 
     /**
-     * Connects the specified node with <tt>JpqlNotEquals</tt>.
+     * Connects the specified BaseContext with <tt>JpqlEquals</tt>.
      */
-    public Node createNotEquals(Node node1, Node node2) {
-        return appendChildren(new JpqlNotEquals(JpqlParserTreeConstants.JJTNOTEQUALS), node1, node2);
+    public static <T extends ExpressionContext, U extends ExpressionContext> JpqlParser.EqualityPredicateContext createEquals(
+            T ctx1, U ctx2) {
+        String predicate = String.format("%s = %s", ctx1.toJpqlString(), ctx2.toJpqlString());
+        return (JpqlParser.EqualityPredicateContext) JpqlParsingHelper.createParser(predicate).predicate();
+    }
+
+    /**
+     * Connects the specified BaseContext with <tt>JpqlNotEquals</tt>.
+     */
+    public static <T extends ExpressionContext, U extends ExpressionContext> InequalityPredicateContext createNotEquals(
+            T ctx1, U ctx2) {
+        String predicate = String.format("%s <> %s", ctx1.toJpqlString(), ctx2.toJpqlString());
+        return (JpqlParser.InequalityPredicateContext) JpqlParsingHelper.createParser(predicate).predicate();
     }
 
     /**
      * Appends the specified children to the list of children of the specified parent.
+     *
      * @return the parent
      */
-    public <N extends Node> N appendChildren(N parent, Node... children) {
+    public <N extends BaseContext> N appendChildren(N parent, BaseContext... children) {
         for (int i = 0; i < children.length; i++) {
-            parent.jjtAddChild(children[i], i);
-            children[i].jjtSetParent(parent);
+            parent.addChild(children[i]);
+            children[i].setParent(parent);
         }
         return parent;
     }
@@ -281,232 +276,323 @@ public class QueryPreparator {
     /**
      * Creates an <tt>JpqlIn</tt> subtree for the specified access rule.
      */
-    public Node createIn(Path alias, JpqlCompiledStatement statement) {
-        JpqlIn in = new JpqlIn(JpqlParserTreeConstants.JJTIN);
-        Node path = createPath(alias);
-        path.jjtSetParent(in);
-        in.jjtAddChild(path, 0);
-        Node subselect = createSubselect(statement);
-        subselect.jjtSetParent(in);
-        in.jjtAddChild(subselect, 1);
+    public BaseContext createIn(Path alias, JpqlCompiledStatement statement) {
+        throw new UnsupportedOperationException();
+        /*
+        JpqlIn in = new JpqlParser.In(JpqlParserTreeConstants.JJTIN);
+        BaseContext path = createPath(alias);
+        path.setParent(in);
+        in.addChild(path, 0);
+        BaseContext subselect = createSubselect(statement);
+        subselect.setParent(in);
+        in.addChild(subselect, 1);
         return createBrackets(in);
+        */
     }
 
     /**
      * Creates brackets for the specified node.
      */
-    public Node createBrackets(Node node) {
-        JpqlBrackets brackets = new JpqlBrackets(JpqlParserTreeConstants.JJTBRACKETS);
-        brackets.jjtAddChild(node, 0);
-        node.jjtSetParent(brackets);
-        return brackets;
+    public static GroupedPredicateContext createBrackets(PredicateContext node) {
+        return (GroupedPredicateContext) JpqlParsingHelper.createParser(String.format("(%s)", node.toJpqlString())).predicate();
     }
 
     /**
-     * Creates a <tt>JpqlPath</tt> node for the specified string.
+     * Creates brackets for the specified node.
      */
-    public JpqlPath createPath(Path path) {
+    public static GroupedExpressionContext createBrackets(ExpressionContext node) {
+        return (GroupedExpressionContext) JpqlParsingHelper.createParser(
+                String.format("(%s)", node.toJpqlString())).expression();
+    }
+
+    /**
+     * Creates a <tt>JpqlPath</tt> BaseContext for the specified string.
+     */
+    public JpqlParser.PathContext createPath(Path path) {
+        throw new UnsupportedOperationException();
+        /*
         JpqlIdentificationVariable identifier = createIdentificationVariable(path.getRootAlias());
-        JpqlPath pathNode = appendChildren(new JpqlPath(JpqlParserTreeConstants.JJTPATH), identifier);
+        JpqlParser.PathContext pathParserRuleContext = appendChildren(new JpqlParser.Path(JpqlParserTreeConstants.JJTPATH), identifier);
         for (String pathComponent: path.getSubpathComponents()) {
             JpqlIdentificationVariable identificationVariable
-                = new JpqlIdentificationVariable(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLE);
+                = new JpqlParser.IdentificationVariable(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLE);
             identificationVariable.setValue(pathComponent);
-            identificationVariable.jjtSetParent(pathNode);
-            pathNode.jjtAddChild(identificationVariable, pathNode.jjtGetNumChildren());
+            identificationVariable.setParent(pathNode);
+            pathNode.addChild(identificationVariable, pathNode.getChildCount());
         }
         return pathNode;
+        */
     }
 
     /**
-     * Creates a <tt>JpqlPath</tt> node for the specified string.
+     * Creates a <tt>JpqlPath</tt> BaseContext for the specified string.
      */
-    public JpqlCollectionValuedPath createCollectionValuedPath(JpqlPath path) {
-        Node clonedPath = path.clone();
+    public JpqlParser.CollectionReferenceContext createCollectionValuedPath(JpqlParser.PathContext path) {
+        throw new UnsupportedOperationException();
+        /*
+        BaseContext clonedPath = path.clone();
         JpqlCollectionValuedPath newPath
-            = new JpqlCollectionValuedPath(JpqlParserTreeConstants.JJTCOLLECTIONVALUEDPATH);
-        for (int i = 0; i < clonedPath.jjtGetNumChildren(); i++) {
-            newPath.jjtAddChild(clonedPath.jjtGetChild(i), i);
-            clonedPath.jjtGetChild(i).jjtSetParent(newPath);
+            = new JpqlParser.CollectionValuedPath(JpqlParserTreeConstants.JJTCOLLECTIONVALUEDPATH);
+        for (int i = 0; i < clonedPath.getChildCount(); i++) {
+            newPath.addChild(clonedPath.getChild(i), i);
+            clonedPath.getChild(i).setParent(newPath);
         }
         return newPath;
+        */
     }
 
     /**
-     * Creates a <tt>JpqlSubselect</tt> node for the specified access rule.
+     * Creates a <tt>JpqlSubselect</tt> BaseContext for the specified access rule.
      */
-    public JpqlSubselect createSubselect(JpqlCompiledStatement statement) {
+    public JpqlParser.SubQueryContext createSubselect(JpqlCompiledStatement statement) {
         if (statement.getSelectedPaths().size() > 1) {
             throw new IllegalArgumentException("Cannot create subselect from statements with scalar select-clause");
         }
-        Node select = createSelectClause(statement.getSelectedPaths().get(0));
-        Node from = statement.getFromClause();
-        Node where = statement.getWhereClause();
-        return appendChildren(new JpqlSubselect(JpqlParserTreeConstants.JJTSUBSELECT), select, from, where);
+        BaseContext select = createSelectClause(statement.getSelectedPaths().get(0));
+        BaseContext from = statement.getFromClause();
+        BaseContext where = statement.getWhereClause();
+        String subQuery = String.format("%s %s %s", select.toJpqlString(), from.toJpqlString(), where.toJpqlString());
+        final JpqlParser.SubQueryContext subQueryContext = JpqlParsingHelper.createParser(subQuery).subQuery();
+        return appendChildren(subQueryContext);
     }
 
     /**
-     * Creates a <tt>JpqlSelectClause</tt> node to select the specified path.
+     * Creates a <tt>JpqlSelectClause</tt> BaseContext to select the specified path.
      */
-    public JpqlSelectClause createSelectClause(Path selectedPath) {
+    public JpqlParser.SelectionContext createSelectClause(Path selectedPath) {
+        throw new UnsupportedOperationException();
+        /*
         JpqlSelectExpression expression = createSelectExpression(createPath(selectedPath));
-        JpqlSelectExpressions expressions = new JpqlSelectExpressions(JpqlParserTreeConstants.JJTSELECTEXPRESSIONS);
+        JpqlSelectExpressions expressions = new JpqlParser.SelectExpressions(JpqlParserTreeConstants.sELECTEXPRESSIONS);
         expressions = appendChildren(expressions, expression);
-        return appendChildren(new JpqlSelectClause(JpqlParserTreeConstants.JJTSELECTCLAUSE), expressions);
+        return appendChildren(new JpqlParser.SelectClause(JpqlParserTreeConstants.sELECTCLAUSE), expressions);
+        */
     }
 
-    public JpqlSelectExpression createSelectExpression(Node node) {
-        JpqlSelectExpression expression = new JpqlSelectExpression(JpqlParserTreeConstants.JJTSELECTEXPRESSION);
+    public JpqlParser.SelectExpressionContext createSelectExpression(BaseContext node) {
+        throw new UnsupportedOperationException();
+        /*
+        JpqlSelectExpression expression = new JpqlParser.SelectExpression(JpqlParserTreeConstants.sELECTEXPRESSION);
         expression = appendChildren(expression, node);
         return expression;
+        */
     }
 
     /**
-     * Creates a <tt>JpqlSelectClause</tt> node to select the specified path.
+     * Creates a <tt>JpqlSelectClause</tt> BaseContext to select the specified path.
      */
-    public JpqlFrom createFrom(EntityType<?> classMapping, Alias alias) {
+    public JpqlParser.FromElementSpaceContext createFrom(EntityType<?> classMapping, Alias alias) {
+        throw new UnsupportedOperationException();
+        /*
         JpqlIdentificationVariableDeclaration declaration
-            = new JpqlIdentificationVariableDeclaration(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLEDECLARATION);
+            = new JpqlParser.IdentificationVariableDeclaration(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLEDECLARATION);
         declaration = appendChildren(declaration, createFromItem(new Alias(classMapping.getName()), alias));
-        return appendChildren(new JpqlFrom(JpqlParserTreeConstants.JJTFROM), declaration);
+        return appendChildren(new JpqlParser.From(JpqlParserTreeConstants.JJTFROM), declaration);
+        */
     }
 
-    public JpqlFromItem createFromItem(Alias type, Alias alias) {
-        JpqlAbstractSchemaName schemaName = new JpqlAbstractSchemaName(JpqlParserTreeConstants.JJTABSTRACTSCHEMANAME);
-        return appendChildren(new JpqlFromItem(JpqlParserTreeConstants.JJTFROMITEM),
+    public JpqlParser.FromElementSpaceRootContext createFromItem(Alias type, Alias alias) {
+        throw new UnsupportedOperationException();
+        /*
+        JpqlAbstractSchemaName schemaName = new JpqlParser.AbstractSchemaName(JpqlParserTreeConstants.aBSTRACTSCHEMANAME);
+        return appendChildren(new JpqlParser.FromItem(JpqlParserTreeConstants.JJTFROMITEM),
                               appendChildren(schemaName, createIdentificationVariable(type)),
                               createIdentificationVariable(alias));
+        */
     }
 
-    public Node createInstanceOf(Path path, EntityType<?> classMapping) {
-        return createEquals(
-                appendChildren(new JpqlType(JpqlParserTreeConstants.JJTTYPE), createPath(path)),
-                appendChildren(
-                        new JpqlAbstractSchemaName(JpqlParserTreeConstants.JJTABSTRACTSCHEMANAME),
-                        createIdentificationVariable(classMapping.getName())));
+    public JpqlParser.PredicateContext createInstanceOf(Path path, EntityType<?> classMapping) {
+        String statement = String.format("TYPE(%s) = %s", path, classMapping.getName());
+        return JpqlParsingHelper.createParser(statement).predicate();
     }
 
-    public JpqlSubselect createSubselectById(Path path, EntityType<?> classMapping) {
+    public JpqlParser.SubQueryContext createSubselectById(Path path, EntityType<?> classMapping) {
+        throw new UnsupportedOperationException();
+        /*
         Alias alias = new Alias(Introspector.decapitalize(classMapping.getName()));
         if (!path.hasSubpath() && path.getRootAlias().equals(alias)) {
             alias = new Alias(alias.toString() + '0');
         }
         JpqlSelectClause select = createSelectClause(alias.toPath());
         JpqlFrom from = createFrom(classMapping, alias);
-        JpqlWhere where = createWhere(createEquals(createPath(alias.toPath()), createPath(path)));
-        return appendChildren(new JpqlSubselect(JpqlParserTreeConstants.JJTSUBSELECT), select, from, where);
+        JpqlParser.WhereClauseContext where = createWhere(createEquals(createPath(alias.toPath()), createPath(path)));
+        return appendChildren(new JpqlParser.Subselect(JpqlParserTreeConstants.sUBSELECT), select, from, where);
+        */
     }
 
-    public JpqlIdentificationVariable createIdentificationVariable(Alias value) {
+    public static JpqlParser.IdentificationVariableContext createIdentificationVariable(Alias value) {
         return createIdentificationVariable(value.toString());
     }
 
-    public JpqlIdentificationVariable createIdentificationVariable(String value) {
+    public static JpqlParser.IdentificationVariableContext createIdentificationVariable(String value) {
+        throw new UnsupportedOperationException();
+        /*
         JpqlIdentificationVariable identificationVariable
-            = new JpqlIdentificationVariable(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLE);
+            = new JpqlParser.IdentificationVariable(JpqlParserTreeConstants.JJTIDENTIFICATIONVARIABLE);
         identificationVariable.setValue(value);
         return identificationVariable;
+        */
     }
 
-    public Node removeConstuctor(final Node statementNode) {
+    public static JpqlParser.EqualityPredicateContext createOneEqualsOne() {
+        JpqlParser.LiteralExpressionContext numberExpression1 = (JpqlParser.LiteralExpressionContext) JpqlParsingHelper
+                .createParser("1").expression();
+        JpqlParser.LiteralExpressionContext numberExpression2 = (JpqlParser.LiteralExpressionContext) JpqlParsingHelper
+                .createParser("1").expression();
+        return createEquals(numberExpression1, numberExpression2);
+    }
+
+    public static JpqlParser.PredicateContext createOneNotEqualsOne() {
+        JpqlParser.LiteralExpressionContext numberExpression1 = (JpqlParser.LiteralExpressionContext) JpqlParsingHelper
+                .createParser("1").expression();
+        JpqlParser.LiteralExpressionContext numberExpression2 = (JpqlParser.LiteralExpressionContext) JpqlParsingHelper
+                .createParser("1").expression();
+        return createNotEquals(numberExpression1, numberExpression2);
+    }
+
+    public BaseContext removeConstructor(final BaseContext statementNode) {
+        throw new UnsupportedOperationException();
+        /*
         statementNode.visit(constructorReplacer);
         return statementNode;
+        */
     }
 
-    public void remove(Node node) {
-        if (node.jjtGetParent() != null) {
-            Node parent = node.jjtGetParent();
-            for (int i = 0; i < parent.jjtGetNumChildren(); i++) {
-                if (node.jjtGetParent().jjtGetChild(i) == node) {
-                    node.jjtGetParent().jjtRemoveChild(i);
-                    node.jjtSetParent(null);
+    public void remove(BaseContext node) {
+        throw new UnsupportedOperationException();
+        /*
+        if (node.getParent() != null) {
+            BaseContext parent = node.getParent();
+            for (int i = 0; i < parent.getChildCount(); i++) {
+                if (node.getParent().getChild(i) == node) {
+                    node.getParent().jjtRemoveChild(i);
+                    node.setParent(null);
                 }
             }
         }
+        */
     }
 
-    public void replace(Node oldNode, Node newNode) {
-        int index = getIndex(oldNode.jjtGetParent(), oldNode);
-        oldNode.jjtGetParent().jjtSetChild(newNode, index);
-        newNode.jjtSetParent(oldNode.jjtGetParent());
-        oldNode.jjtSetParent(null);
+    public static ParserRuleContext replace(ParserRuleContext oldCtx, ParseTree newCtx) {
+        ParseTree parent = oldCtx.getParent();
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            if (parent.getChild(i) == oldCtx) {
+                TreeRewriteSupport.setChild((RuleNode)parent, i, newCtx);
+                return (ParserRuleContext)newCtx;
+            }
+        }
+
+        return null;
     }
 
-    public void replace(Node node, Path oldPath, Path newPath) {
-        node.visit(pathReplacer, new ReplaceParameters(oldPath, newPath));
+    public void replace(BaseContext node, Path oldPath, Path newPath) {
+        new PathReplacer(new ReplaceParameters(oldPath, newPath)).visit(node);
     }
 
-    private int getIndex(Node parent, Node child) {
-        for (int i = 0; i < parent.jjtGetNumChildren(); i++) {
-            if (parent.jjtGetChild(i) == child) {
+    private int getIndex(BaseContext parent, BaseContext child) {
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            if (parent.getChild(i) == child) {
                 return i;
             }
         }
         return -1;
     }
 
-    private class PathReplacer extends JpqlVisitorAdapter<ReplaceParameters> {
+    private static JpqlParser.IsNullPredicateContext createIsNullPredicate(ExpressionContext ctx, boolean negated) {
+        String predicate = String.format("%s IS %sNULL", ctx.toJpqlString(), negated ? "NOT " : "");
+        return (JpqlParser.IsNullPredicateContext) JpqlParsingHelper.createParser(predicate).predicate();
+    }
 
-        public boolean visit(JpqlPath path, ReplaceParameters parameters) {
-            if (canReplace(path, parameters)) {
-                replace(path, parameters);
-            }
-            return false;
+    private static class PathReplacer extends JpqlVisitorAdapter<ReplaceParameters> {
+
+        PathReplacer(ReplaceParameters value) {
+            super(value);
         }
 
-        private boolean canReplace(JpqlPath path, ReplaceParameters parameters) {
+        @Override
+        public ReplaceParameters visitSimplePath(JpqlParser.SimplePathContext ctx) {
+            if (canReplace(ctx.simplePathQualifier(), defaultResult())) {
+                replace(ctx.simplePathQualifier(), defaultResult());
+            }
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public ReplaceParameters visitMapEntryPath(JpqlParser.MapEntryPathContext ctx) {
+            visit(ctx.mapReference());
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public ReplaceParameters visitIndexedPath(JpqlParser.IndexedPathContext ctx) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ReplaceParameters visitCompoundPath(JpqlParser.CompoundPathContext ctx) {
+            throw new UnsupportedOperationException();
+        }
+
+        private boolean canReplace(JpqlParser.SimplePathQualifierContext path, ReplaceParameters parameters) {
             Path oldPath = parameters.getOldPath();
-            if (path.jjtGetNumChildren() <= oldPath.getSubpathComponents().length) {
+            if (path.getChildCount() <= oldPath.getSubpathComponents().length) {
                 return false;
             }
-            if (!oldPath.getRootAlias().getName().equals(((SimpleNode)path.jjtGetChild(0)).getValue())) {
+            if (!oldPath.getRootAlias().getName().equals(path.getChild(0).getText())) {
                 return false;
             }
             String[] pathComponents = oldPath.getSubpathComponents();
             for (int i = 1; i <= pathComponents.length; i++) {
-                if (!pathComponents[i - 1].equals(((SimpleNode)path.jjtGetChild(i)).getValue())) {
+                if (!pathComponents[i - 1].equals(path.getChild(i).getText())) {
                     return false;
                 }
             }
             return true;
         }
 
-        private void replace(JpqlPath path, ReplaceParameters parameters) {
-            for (int i = 0; i <= parameters.getOldPath().getSubpathComponents().length; i++) {
-                path.jjtRemoveChild(0);
+        private void replace(JpqlParser.SimplePathQualifierContext path, ReplaceParameters parameters) {
+            StringBuilder pathParts = new StringBuilder();
+            for (int i = 0; i < path.getChildCount(); i++) {
+                ParseTree child = path.getChild(i);
+                if (parameters.getOldPath().toString().equals(child.getText())) {
+                    pathParts.append(parameters.getNewPath().toString());
+                } else {
+                    pathParts.append(child.getText());
+                }
             }
-            prepend(parameters.getNewPath(), path);
+
+            JpqlParser.DotIdentifierSequenceContext identifier = JpqlParsingHelper.createParser(pathParts.toString())
+                    .dotIdentifierSequence();
+            QueryPreparator.replace(path, identifier);
         }
     }
 
-    private class ReplaceParameters {
+    private static final class ConstructorReplacer extends JpqlVisitorAdapter<List<ParseTree>> {
 
-        private Path oldPath;
-        private Path newPath;
+        private final List<ParseTree> childNodes;
 
-        ReplaceParameters(Path oldPath, Path newPath) {
-            this.oldPath = oldPath;
-            this.newPath = newPath;
+        private ConstructorReplacer(List<ParseTree> childNodes) {
+            super(childNodes);
+            this.childNodes = childNodes;
         }
 
-        public Path getOldPath() {
-            return oldPath;
+        @Override
+        public List<ParseTree> visitSelectionList(JpqlParser.SelectionListContext ctx) {
+            return super.visitSelectionList(ctx);
         }
 
-        public Path getNewPath() {
-            return newPath;
-        }
-    }
 
-    private class ConstructorReplacer extends JpqlVisitorAdapter<List<Node>> {
+        /*
 
-        public boolean visit(JpqlSelectExpressions node, List<Node> nodes) {
-            if (node.jjtGetNumChildren() == 1) {
-                List<Node> constructorParameters = new ArrayList<Node>();
-                node.jjtGetChild(0).visit(this, constructorParameters);
+
+
+        public boolean visit(JpqlSelectExpressions node, List<ParserTree> nodes) {
+            if (node.getChildCount() == 1) {
+                List<ParserTree> constructorParameters = new ArrayList<ParserTree>();
+                node.getChild(0).visit(this, constructorParameters);
                 if (!constructorParameters.isEmpty()) {
-                    remove(node.jjtGetChild(0));
-                    JpqlSelectExpression[] selectExpressions = new JpqlSelectExpression[constructorParameters.size()];
+                    remove(node.getChild(0));
+                    JpqlParser.SelectExpression[] selectExpressions = new JpqlParser.SelectExpression[constructorParameters.size()];
                     for (int i = 0; i < selectExpressions.length; i++) {
                         selectExpressions[i] = createSelectExpression(constructorParameters.get(i));
                     }
@@ -516,11 +602,97 @@ public class QueryPreparator {
             return false;
         }
 
-        public boolean visit(JpqlConstructorParameter node, List<Node> parameters) {
-            for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-                parameters.add(node.jjtGetChild(i));
+        public boolean visit(JpqlParser.ConstructorExpressionContext node, List<ParserTree> parameters) {
+            for (int i = 0; i < node.getChildCount(); i++) {
+                parameters.add(node.getChild(i));
             }
             return false;
+        }
+        */
+    }
+
+    private static final class AppendWhereClauseVisitor extends AbstractParseTreeVisitor<ParseTree> {
+
+        private final JpqlParser.WhereClauseContext whereClause;
+
+        AppendWhereClauseVisitor(JpqlParser.WhereClauseContext whereClause) {
+            this.whereClause = whereClause;
+        }
+
+        @Override
+        public ParseTree visit(ParseTree tree) {
+            ParseTree clause = whereClause.getChild(0);
+            throw new UnsupportedOperationException();
+
+            /*
+            if (!(clause instanceof JpqlBrackets)) {
+                clause = createBrackets(clause);
+                clause.setParent(whereClause);
+            }
+            BaseContext and = createAnd(clause, node);
+            and.setParent(whereClause);
+            whereClause.setChild(and, 0);
+
+            return whereClause;
+            */
+        }
+    }
+
+    private static class ReplaceParameters {
+
+        private final Path oldPath;
+        private final Path newPath;
+
+        @java.beans.ConstructorProperties({"oldPath", "newPath"})
+        ReplaceParameters(Path oldPath, Path newPath) {
+            this.oldPath = oldPath;
+            this.newPath = newPath;
+        }
+
+        Path getOldPath() {
+            return this.oldPath;
+        }
+
+        Path getNewPath() {
+            return this.newPath;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (!(o instanceof ReplaceParameters)) {
+                return false;
+            }
+            final ReplaceParameters other = (ReplaceParameters) o;
+            final Object this$oldPath = this.getOldPath();
+            final Object other$oldPath = other.getOldPath();
+            if (this$oldPath == null ? other$oldPath != null : !this$oldPath.equals(other$oldPath)) {
+                return false;
+            }
+            final Object this$newPath = this.getNewPath();
+            final Object other$newPath = other.getNewPath();
+            if (this$newPath == null ? other$newPath != null : !this$newPath.equals(other$newPath)) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            final int PRIME = 59;
+            int result = 1;
+            final Object $oldPath = this.getOldPath();
+            result = result * PRIME + ($oldPath == null ? 43 : $oldPath.hashCode());
+            final Object $newPath = this.getNewPath();
+            result = result * PRIME + ($newPath == null ? 43 : $newPath.hashCode());
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "QueryPreparator.ReplaceParameters(oldPath=" + this.getOldPath() + ", newPath=" + this.getNewPath() + ")";
         }
     }
 }

@@ -22,6 +22,9 @@ import org.jpasecurity.AccessType;
  */
 public class ReadingTag extends AbstractEntityTag {
 
+    private static final long serialVersionUID = -1014966433518005838L;
+
+    @Override
     protected AccessType getAccessType() {
         return AccessType.READ;
     }

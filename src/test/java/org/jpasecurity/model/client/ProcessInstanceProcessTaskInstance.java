@@ -17,10 +17,11 @@ package org.jpasecurity.model.client;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.ForeignKey;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.ForeignKey;
 
 /**
  *
@@ -30,12 +31,12 @@ import org.hibernate.annotations.ForeignKey;
 public class ProcessInstanceProcessTaskInstance extends AbstractEntity<Integer> {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @ForeignKey(name = "FK_pipti_process_instance_id")
+    @JoinColumn(foreignKey = @ForeignKey(name = "FK_pipti_process_instance_id"))
     @Fetch(FetchMode.JOIN)
     private ProcessInstance processInstance;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @ForeignKey(name = "FK_pipti_pro_task_instance_id")
+    @JoinColumn(foreignKey = @ForeignKey(name = "FK_pipti_pro_task_instance_id"))
     @Fetch(FetchMode.JOIN)
     private ProcessTaskInstance processTaskInstance;
 

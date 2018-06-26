@@ -25,6 +25,8 @@ import org.jpasecurity.AccessType;
  */
 public abstract class AbstractEntityTag extends AbstractSecurityTag {
 
+    private static final long serialVersionUID = -8892363867751021894L;
+
     private String entityName;
 
     public String getEntity() {
@@ -35,11 +37,13 @@ public abstract class AbstractEntityTag extends AbstractSecurityTag {
         this.entityName = entity;
     }
 
+    @Override
     public void release() {
         entityName = null;
         super.release();
     }
 
+    @Override
     protected boolean isAccessible() {
         Object entity = resolveEntity();
         return getAccessManager().isAccessible(getAccessType(), entity);
@@ -48,10 +52,7 @@ public abstract class AbstractEntityTag extends AbstractSecurityTag {
     protected abstract AccessType getAccessType();
 
     private Object resolveEntity() {
-
-        Object entity;
-
-        entity = pageContext.getAttribute(entityName, PageContext.PAGE_SCOPE);
+        Object entity = pageContext.getAttribute(entityName, PageContext.PAGE_SCOPE);
         if (entity != null) {
             return entity;
         }

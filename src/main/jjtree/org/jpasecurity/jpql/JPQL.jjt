@@ -48,21 +48,21 @@ package org.jpasecurity.jpql.parser;
 import java.io.*;
 
 public class JpqlParser {
-    
+
     public JpqlParser() {
         this(new StringReader(""));
     }
-    
+
     public JpqlStatement parseQuery(String query) throws ParseException {
         ReInit(new StringReader(query));
         return jpqlStatement();
     }
-    
+
     public JpqlAccessRule parseRule(String rule) throws ParseException {
         ReInit(new StringReader(rule));
         return jpqlAccessRule();
     }
-    
+
     public JpqlWhere parseWhereClause(String whereClause) throws ParseException {
         ReInit(new StringReader(whereClause));
         return whereClause();
@@ -356,7 +356,7 @@ void outerFetchJoin() #OuterFetchJoin: {} {
 }
 
 void innerFetchJoin() #InnerFetchJoin: {} {
-    [<INNER>] <JOIN> <FETCH> joinPathExpression() [[LOOKAHEAD(1) <AS>] identificationVariable()] [LOOKAHEAD(1) with()] 
+    [<INNER>] <JOIN> <FETCH> joinPathExpression() [[LOOKAHEAD(1) <AS>] identificationVariable()] [LOOKAHEAD(1) with()]
 }
 
 void with() #With: {} {
@@ -491,7 +491,7 @@ void subselectExpressions() #SelectExpressions: {} {
 }
 
 void subselectExpression() #SelectExpression: {} {
-    LOOKAHEAD(singleValuedPathExpression()) singleValuedPathExpression() 
+    LOOKAHEAD(singleValuedPathExpression()) singleValuedPathExpression()
         | LOOKAHEAD(scalarExpression()) scalarExpression()
         | aggregateExpression()
         | LOOKAHEAD(1) identificationVariable()
@@ -507,7 +507,7 @@ void classname() #ClassName: {}
 }
 
 void constructorParameters(): {} {
-    "(" (constructorParameter()) (<COMMA> (constructorParameter()))* ")" 
+    "(" (constructorParameter()) (<COMMA> (constructorParameter()))* ")"
 }
 
 void constructorParameter() #ConstructorParameter: {} {
@@ -567,14 +567,14 @@ void sum() #Sum: {} {
 }
 
 JpqlWhere whereClause() #Where: {} {
-    <WHERE> conditionalExpression() 
+    <WHERE> conditionalExpression()
     {
         return jjtThis;
     }
 }
 
 void groupByClause() #GroupBy: {} {
-    <GROUP> <BY> groupByItem() (LOOKAHEAD(2) <COMMA> (groupByItem()))* 
+    <GROUP> <BY> groupByItem() (LOOKAHEAD(2) <COMMA> (groupByItem()))*
 }
 
 void groupByItem(): {} {
@@ -582,7 +582,7 @@ void groupByItem(): {} {
 }
 
 void havingClause() #Having: {} {
-    <HAVING> conditionalExpression() 
+    <HAVING> conditionalExpression()
 }
 
 void subqueryInBrackets() #Brackets: {} {
@@ -591,10 +591,10 @@ void subqueryInBrackets() #Brackets: {} {
 
 void subquery() #Subselect: {} {
     simpleSelectClause()
-        subqueryFromClause() 
-        [LOOKAHEAD(whereClause()) whereClause()] 
-        [LOOKAHEAD(groupByClause()) groupByClause()] 
-        [LOOKAHEAD(havingClause()) havingClause()] 
+        subqueryFromClause()
+        [LOOKAHEAD(whereClause()) whereClause()]
+        [LOOKAHEAD(groupByClause()) groupByClause()]
+        [LOOKAHEAD(havingClause()) havingClause()]
 }
 
 void scalarExpression(): {} {
@@ -629,12 +629,12 @@ void conditionalPrimary(): {} {
 
 void simpleConditionalExpression(): {} {
     LOOKAHEAD(existsExpression()) existsExpression() |
-    LOOKAHEAD(comparisonExpression()) comparisonExpression() | 
-    LOOKAHEAD(betweenExpression()) betweenExpression() | 
-    LOOKAHEAD(likeExpression()) likeExpression() | 
-    LOOKAHEAD(inExpression()) inExpression() | 
-    LOOKAHEAD(nullComparisonExpression()) nullComparisonExpression() | 
-    LOOKAHEAD(emptyCollectionComparisonExpression()) emptyCollectionComparisonExpression() | 
+    LOOKAHEAD(comparisonExpression()) comparisonExpression() |
+    LOOKAHEAD(betweenExpression()) betweenExpression() |
+    LOOKAHEAD(likeExpression()) likeExpression() |
+    LOOKAHEAD(inExpression()) inExpression() |
+    LOOKAHEAD(nullComparisonExpression()) nullComparisonExpression() |
+    LOOKAHEAD(emptyCollectionComparisonExpression()) emptyCollectionComparisonExpression() |
     LOOKAHEAD(collectionMemberExpression()) collectionMemberExpression()
 }
 
@@ -698,11 +698,11 @@ void likeExpression(): {} {
 }
 
 void positiveLikeExpression() #Like: {} {
-    stringExpression() <LIKE> patternValue() 
+    stringExpression() <LIKE> patternValue()
 }
 
 void negativeLikeExpression() #Like: {} {
-    stringExpression() <NOT> <LIKE> patternValue() 
+    stringExpression() <NOT> <LIKE> patternValue()
 }
 
 void nullComparisonExpression(): {} {
@@ -711,11 +711,11 @@ void nullComparisonExpression(): {} {
 }
 
 void positiveNullComparisionExpression() #IsNull: {} {
-    (inputParameter() | singleValuedPathExpression()) <IS> <NULL> 
+    (inputParameter() | singleValuedPathExpression()) <IS> <NULL>
 }
 
 void negativeNullComparisionExpression() #IsNull: {} {
-    (inputParameter() | singleValuedPathExpression()) <IS> <NOT> <NULL> 
+    (inputParameter() | singleValuedPathExpression()) <IS> <NOT> <NULL>
 }
 
 void emptyCollectionComparisonExpression(): {} {
@@ -724,11 +724,11 @@ void emptyCollectionComparisonExpression(): {} {
 }
 
 void positiveEmptyCollectionComparisonExpression() #IsEmpty: {} {
-    collectionValuedPath() <IS> <EMPTY> 
+    collectionValuedPath() <IS> <EMPTY>
 }
 
 void negativeEmptyCollectionComparisonExpression() #IsEmpty: {} {
-    collectionValuedPath() <IS> <NOT> <EMPTY> 
+    collectionValuedPath() <IS> <NOT> <EMPTY>
 }
 
 void collectionMemberExpression(): {} {
@@ -750,11 +750,11 @@ void existsExpression(): {} {
 }
 
 void positiveExistsExpression() #Exists: {} {
-    <EXISTS> "(" subquery() ")" 
+    <EXISTS> "(" subquery() ")"
 }
 
 void negativeExistsExpression() #Exists: {} {
-    <NOT> <EXISTS> "(" subquery() ")" 
+    <NOT> <EXISTS> "(" subquery() ")"
 }
 
 void allOrAnyExpression(): {} {
@@ -762,23 +762,23 @@ void allOrAnyExpression(): {} {
 }
 
 void anyExpression() #Any: {} {
-    <ANY> "(" subquery() ")" 
+    <ANY> "(" subquery() ")"
 }
 
 void someExpression() #Any: {} {
     // SOME and ANY are synonymous
-    <SOME> "(" subquery() ")" 
+    <SOME> "(" subquery() ")"
 }
 
 void allExpression() #All: {} {
-    <ALL> "(" subquery() ")" 
+    <ALL> "(" subquery() ")"
 }
 
 void comparisonExpression(): {} {
     LOOKAHEAD(arithmeticComp()) arithmeticComp() |
     LOOKAHEAD(stringComp()) stringComp() |
-    LOOKAHEAD(booleanComp()) booleanComp() | 
-    LOOKAHEAD(enumComp()) enumComp() | 
+    LOOKAHEAD(booleanComp()) booleanComp() |
+    LOOKAHEAD(enumComp()) enumComp() |
     LOOKAHEAD(datetimeComp()) datetimeComp() |
     LOOKAHEAD(entityComp()) entityComp() |
     LOOKAHEAD(entityTypeComp()) entityTypeComp()
@@ -898,7 +898,7 @@ void arithmeticFactor(): {} {
 }
 
 void numericPath(): {} {
-    ([<PLUS>] singleValuedPathExpression()) | negatedPath() 
+    ([<PLUS>] singleValuedPathExpression()) | negatedPath()
 }
 
 void negatedPath() #Negative: {} {
@@ -914,12 +914,12 @@ void negatedInputParameter() #Negative: {} {
 }
 
 void numericSubqueryInBrackets(): {} {
-    ([<PLUS>] subqueryInBrackets()) | negatedSubqueryInBrackets() 
+    ([<PLUS>] subqueryInBrackets()) | negatedSubqueryInBrackets()
 }
 
 void negatedSubqueryInBrackets() #Negative: {} {
     <MINUS> subqueryInBrackets()
-} 
+}
 
 void stringValue(): {} {
     singleValuedPathExpression() | functionsReturningStrings() | subqueryInBrackets()
@@ -934,7 +934,7 @@ void stringExpression(): {} {
 }
 
 void stringPrimary(): {} {
-    stringLiteral() | singleValuedPathExpression() | LOOKAHEAD(2) stringExpressionInBrackets() | 
+    stringLiteral() | singleValuedPathExpression() | LOOKAHEAD(2) stringExpressionInBrackets() |
     functionsReturningStrings() | LOOKAHEAD(2) subqueryInBrackets()
 }
 
@@ -1047,7 +1047,7 @@ void positiveFunctionsReturningNumerics(): {} {
 
 void negativeFunctionsReturningNumerics() #Negative: {} {
     <MINUS> positiveFunctionsReturningNumerics()
-} 
+}
 
 void length() #Length: {} {
     <LENGTH> "(" stringExpression() ")"
@@ -1081,7 +1081,7 @@ void functionsReturningDatetime(): {} {
 }
 
 void orderByClause() #OrderBy: {} {
-    <ORDER> <BY> orderByItem() (<COMMA> orderByItem())* 
+    <ORDER> <BY> orderByItem() (<COMMA> orderByItem())*
 }
 
 void orderByItem() #OrderByItem: {} {

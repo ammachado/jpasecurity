@@ -27,11 +27,12 @@ import javax.persistence.criteria.Root;
 
 import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.model.FieldAccessAnnotationTestBean;
+import org.jpasecurity.model.FieldAccessAnnotationTestBean_;
 import org.jpasecurity.model.SimpleEmbeddable;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -41,8 +42,8 @@ public class CriteriaEntityFilterTest {
 
     public static final String USER = "user";
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("annotation-based-field-access");
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("annotation-based-field-access");
 
     private CriteriaBuilder criteriaBuilder;
     private FieldAccessAnnotationTestBean accessibleBean;
@@ -54,21 +55,19 @@ public class CriteriaEntityFilterTest {
         inaccessibleBean = new FieldAccessAnnotationTestBean("");
         accessibleBean = new FieldAccessAnnotationTestBean(USER, inaccessibleBean);
         accessibleBean.setSimpleEmbeddable(new SimpleEmbeddable("embedded-name"));
-        entityManager.getTransaction().begin();
-        entityManager.persist(inaccessibleBean);
-        entityManager.persist(accessibleBean);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
-        criteriaBuilder = entityManager.getCriteriaBuilder();
+        ENTITY_MANAGER.persist(inaccessibleBean);
+        ENTITY_MANAGER.persist(accessibleBean);
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
+        criteriaBuilder = ENTITY_MANAGER.getCriteriaBuilder();
     }
 
     @After
     public void tearDown() {
         TestSecurityContext.authenticate("admin", "admin");
-        entityManager.getTransaction().begin();
-        entityManager.remove(entityManager.merge(accessibleBean));
-        entityManager.remove(entityManager.merge(inaccessibleBean));
-        entityManager.getTransaction().commit();
+        ENTITY_MANAGER.remove(ENTITY_MANAGER.merge(accessibleBean));
+        ENTITY_MANAGER.remove(ENTITY_MANAGER.merge(inaccessibleBean));
+        ENTITY_MANAGER.getTransaction().commit();
         TestSecurityContext.authenticate(null);
     }
 
@@ -78,7 +77,7 @@ public class CriteriaEntityFilterTest {
         CriteriaQuery<FieldAccessAnnotationTestBean> query
             = criteriaBuilder.createQuery(FieldAccessAnnotationTestBean.class);
         query.from(FieldAccessAnnotationTestBean.class);
-        List<FieldAccessAnnotationTestBean> beans = entityManager.createQuery(query).getResultList();
+        List<FieldAccessAnnotationTestBean> beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, beans.size());
         assertEquals(accessibleBean, beans.iterator().next());
     }
@@ -90,7 +89,7 @@ public class CriteriaEntityFilterTest {
             = criteriaBuilder.createQuery(FieldAccessAnnotationTestBean.class);
         Root<FieldAccessAnnotationTestBean> bean = query.from(FieldAccessAnnotationTestBean.class);
         query.select(bean);
-        List<FieldAccessAnnotationTestBean> beans = entityManager.createQuery(query).getResultList();
+        List<FieldAccessAnnotationTestBean> beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, beans.size());
         assertEquals(accessibleBean, beans.iterator().next());
     }
@@ -101,8 +100,8 @@ public class CriteriaEntityFilterTest {
         CriteriaQuery<String> query
             = criteriaBuilder.createQuery(String.class);
         Root<FieldAccessAnnotationTestBean> bean = query.from(FieldAccessAnnotationTestBean.class);
-        query.select(bean.<String>get("name"));
-        List<String> beans = entityManager.createQuery(query).getResultList();
+        query.select(bean.get(FieldAccessAnnotationTestBean_.name));
+        List<String> beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, beans.size());
         assertEquals(accessibleBean.getBeanName(), beans.iterator().next());
     }
@@ -110,11 +109,10 @@ public class CriteriaEntityFilterTest {
     @Test
     public void simpleSelectionWithEmbeddedPath() {
         TestSecurityContext.authenticate(USER);
-        CriteriaQuery<SimpleEmbeddable> query
-            = criteriaBuilder.createQuery(SimpleEmbeddable.class);
+        CriteriaQuery<SimpleEmbeddable> query = criteriaBuilder.createQuery(SimpleEmbeddable.class);
         Root<FieldAccessAnnotationTestBean> bean = query.from(FieldAccessAnnotationTestBean.class);
-        query.select(bean.<SimpleEmbeddable>get("embeddable"));
-        List<SimpleEmbeddable> beans = entityManager.createQuery(query).getResultList();
+        query.select(bean.get(FieldAccessAnnotationTestBean_.embeddable));
+        List<SimpleEmbeddable> beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, beans.size());
         assertEquals(accessibleBean.getSimpleEmbeddable(), beans.iterator().next());
     }
@@ -125,7 +123,7 @@ public class CriteriaEntityFilterTest {
         CriteriaQuery<Long> query = criteriaBuilder.createQuery(Long.class);
         Root<FieldAccessAnnotationTestBean> bean = query.from(FieldAccessAnnotationTestBean.class);
         query.select(criteriaBuilder.count(bean));
-        List<Long> count = entityManager.createQuery(query).getResultList();
+        List<Long> count = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, count.size());
         assertEquals(Long.valueOf(1), count.iterator().next());
     }
@@ -135,14 +133,14 @@ public class CriteriaEntityFilterTest {
         TestSecurityContext.authenticate("admin", "admin");
         CriteriaQuery<Tuple> query = criteriaBuilder.createTupleQuery();
         Root<FieldAccessAnnotationTestBean> bean = query.from(FieldAccessAnnotationTestBean.class);
-        query.multiselect(bean, bean.get("parent"));
-        List<Tuple> beans = entityManager.createQuery(query).getResultList();
+        query.multiselect(bean, bean.get(FieldAccessAnnotationTestBean_.parent));
+        List<Tuple> beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, beans.size());
         assertEquals(accessibleBean, beans.iterator().next().get(0));
         assertEquals(inaccessibleBean, beans.iterator().next().get(1));
 
         TestSecurityContext.authenticate(USER);
-        beans = entityManager.createQuery(query).getResultList();
+        beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertTrue(beans.isEmpty());
     }
 
@@ -151,8 +149,10 @@ public class CriteriaEntityFilterTest {
         TestSecurityContext.authenticate(USER);
         CriteriaQuery<Tuple> query = criteriaBuilder.createTupleQuery();
         Root<FieldAccessAnnotationTestBean> bean = query.from(FieldAccessAnnotationTestBean.class);
-        query.multiselect(bean.<String>get("name"), bean.<SimpleEmbeddable>get("embeddable"));
-        List<Tuple> beans = entityManager.createQuery(query).getResultList();
+        query.multiselect(
+                bean.get(FieldAccessAnnotationTestBean_.name), bean.get(FieldAccessAnnotationTestBean_.embeddable)
+        );
+        List<Tuple> beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, beans.size());
         assertEquals(accessibleBean.getBeanName(), beans.iterator().next().get(0));
         assertEquals(accessibleBean.getSimpleEmbeddable(), beans.iterator().next().get(1));
@@ -165,11 +165,13 @@ public class CriteriaEntityFilterTest {
             = criteriaBuilder.createQuery(FieldAccessAnnotationTestBean.class);
         Root<FieldAccessAnnotationTestBean> bean = query.from(FieldAccessAnnotationTestBean.class);
         query.select(bean);
-        query.where(criteriaBuilder.equal(bean.get("id"), accessibleBean.getIdentifier()));
-        List<FieldAccessAnnotationTestBean> beans = entityManager.createQuery(query).getResultList();
+        query.where(criteriaBuilder.equal(bean.get(FieldAccessAnnotationTestBean_.id), accessibleBean.getIdentifier()));
+        List<FieldAccessAnnotationTestBean> beans = ENTITY_MANAGER.createQuery(query).getResultList();
         assertEquals(1, beans.size());
         assertEquals(accessibleBean, beans.iterator().next());
-        query.where(criteriaBuilder.equal(bean.get("id"), inaccessibleBean.getIdentifier()));
-        assertTrue(entityManager.createQuery(query).getResultList().isEmpty());
+        query.where(
+                criteriaBuilder.equal(bean.get(FieldAccessAnnotationTestBean_.id), inaccessibleBean.getIdentifier())
+        );
+        assertTrue(ENTITY_MANAGER.createQuery(query).getResultList().isEmpty());
     }
 }

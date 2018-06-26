@@ -19,18 +19,18 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.persistence.PersistenceException;
 import javax.persistence.metamodel.Metamodel;
 
 import org.jpasecurity.Alias;
 import org.jpasecurity.jpql.TypeDefinition;
 import org.jpasecurity.jpql.compiler.JpqlCompiler;
-import org.jpasecurity.jpql.parser.JpqlAccessRule;
+import org.jpasecurity.jpql.parser.JpqlParser;
 import org.jpasecurity.security.AccessRule;
 
 /**
  * This compiler compiles access rules
+ *
  * @author Arne Limburg
  */
 public class AccessRulesCompiler extends JpqlCompiler {
@@ -39,16 +39,16 @@ public class AccessRulesCompiler extends JpqlCompiler {
         super(metamodel);
     }
 
-    public Collection<AccessRule> compile(JpqlAccessRule rule) {
+    public Collection<AccessRule> compile(JpqlParser.AccessRuleContext rule) {
         Set<TypeDefinition> typeDefinitions = getAliasDefinitions(rule);
         if (typeDefinitions.isEmpty()) {
-            throw new PersistenceException("Access rule has no alias specified: " + rule.toString());
+            throw new PersistenceException("Access rule has no alias specified: '" + rule.toJpqlString() + "'");
         }
         Alias alias = typeDefinitions.iterator().next().getAlias();
         for (TypeDefinition typeDefinition: typeDefinitions) {
             if (!typeDefinition.getAlias().equals(alias)) {
-                String message = "An access rule must have exactly one alias specified, found "
-                                 + alias + " and " + typeDefinition.getAlias() + ": " + rule.toString();
+                String message = "An access rule must have exactly one alias specified, found '"
+                                 + alias + "' and " + typeDefinition.getAlias() + ": '" + rule.toJpqlString() + "'";
                 throw new PersistenceException(message);
             }
         }
@@ -59,7 +59,7 @@ public class AccessRulesCompiler extends JpqlCompiler {
         if (!getPositionalParameters(rule).isEmpty()) {
             throw new PersistenceException("Positional parameters are not allowed for access rules");
         }
-        Set<AccessRule> accessRules = new HashSet<AccessRule>();
+        Set<AccessRule> accessRules = new HashSet<>();
         for (TypeDefinition typeDefinition: typeDefinitions) {
             accessRules.add(new AccessRule(rule, typeDefinition));
         }

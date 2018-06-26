@@ -22,11 +22,13 @@ import org.jpasecurity.AccessType;
  */
 public class DeletionTagTest extends AbstractEntityTagTestCase {
 
-    public AbstractEntityTag createEntityTag() {
+    @Override
+    protected AbstractEntityTag createEntityTag() {
         return new DeletionTag();
     }
 
-    public AccessType getAccessType() {
+    @Override
+    protected AccessType getAccessType() {
         return AccessType.DELETE;
     }
 }

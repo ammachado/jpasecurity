@@ -6,7 +6,7 @@
     <named-query name="ParentTestBean.findAll">
         <query>SELECT p FROM ParentTestBean p</query>
     </named-query>
-    <package>org.jpasecurity</package>
+    <package>org.jpasecurity.model</package>
     <entity name="MethodAccessTestBean" class="MethodAccessTestBean" access="PROPERTY">
         <named-query name="findAll">
             <query>SELECT m FROM MethodAccessTestBean m</query>

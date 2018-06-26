@@ -16,7 +16,6 @@
 package org.jpasecurity.contacts.ejb;
 
 import java.util.List;
-
 import javax.annotation.security.DeclareRoles;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -36,17 +35,20 @@ public class ContactsDaoBean implements LocalContactsDao, RemoteContactsDao {
     @PersistenceContext(name = "ejb-contacts", unitName = "ejb-contacts")
     private EntityManager entityManager;
 
+    @Override
     public List<User> getAllUsers() {
-        return entityManager.createQuery("SELECT user FROM User user").getResultList();
+        return entityManager.createQuery("SELECT user FROM User user", User.class).getResultList();
     }
 
+    @Override
     public User getUser(String name) {
-        return (User)entityManager.createQuery("SELECT user FROM User user WHERE user.name = :name")
-                                  .setParameter("name", name)
-                                  .getSingleResult();
+        return entityManager.createQuery("SELECT user FROM User user WHERE user.name = :name", User.class)
+                            .setParameter("name", name)
+                            .getSingleResult();
     }
 
+    @Override
     public List<Contact> getAllContacts() {
-        return entityManager.createQuery("SELECT contact FROM Contact contact").getResultList();
+        return entityManager.createQuery("SELECT contact FROM Contact contact", Contact.class).getResultList();
     }
 }

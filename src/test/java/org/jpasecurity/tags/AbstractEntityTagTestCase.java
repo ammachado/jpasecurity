@@ -15,6 +15,8 @@
  */
 package org.jpasecurity.tags;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,21 +24,23 @@ import static org.mockito.Mockito.when;
 import javax.servlet.jsp.PageContext;
 import javax.servlet.jsp.tagext.Tag;
 
-import junit.framework.TestCase;
-
 import org.jpasecurity.AccessManager;
 import org.jpasecurity.AccessType;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * @author Arne Limburg
  */
-public abstract class AbstractEntityTagTestCase extends TestCase {
+public abstract class AbstractEntityTagTestCase {
 
     private PageContext pageContext = new MockPageContext();
     private Object entity = new Object();
     private AbstractEntityTag entityTag;
     private AccessManager accessManager;
 
+    @Before
     public void setUp() {
         entityTag = createEntityTag();
         entityTag.setPageContext(pageContext);
@@ -44,10 +48,12 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         accessManager = mock(AccessManager.class);
     }
 
+    @After
     public void tearDown() {
         entityTag.release();
     }
 
+    @Test
     public void testAccessiblePageScope() {
         initializeEntity(PageContext.PAGE_SCOPE);
         initializeAccessManager(PageContext.PAGE_SCOPE, true);
@@ -55,6 +61,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testNotAccessiblePageScope() {
         initializeEntity(PageContext.PAGE_SCOPE);
         initializeAccessManager(PageContext.PAGE_SCOPE, false);
@@ -62,6 +69,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testAccessibleRequestScope() {
         initializeEntity(PageContext.REQUEST_SCOPE);
         initializeAccessManager(PageContext.REQUEST_SCOPE, true);
@@ -69,6 +77,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testNotAccessibleRequestScope() {
         initializeEntity(PageContext.REQUEST_SCOPE);
         initializeAccessManager(PageContext.REQUEST_SCOPE, false);
@@ -76,6 +85,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testAccessibleSessionScope() {
         initializeEntity(PageContext.SESSION_SCOPE);
         initializeAccessManager(PageContext.SESSION_SCOPE, true);
@@ -83,6 +93,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testNotAccessibleSessionScope() {
         initializeEntity(PageContext.SESSION_SCOPE);
         initializeAccessManager(PageContext.SESSION_SCOPE, false);
@@ -90,6 +101,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testAccessibleApplicationScope() {
         initializeEntity(PageContext.APPLICATION_SCOPE);
         initializeAccessManager(PageContext.APPLICATION_SCOPE, true);
@@ -97,6 +109,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testNotAccessibleApplicationScope() {
         initializeEntity(PageContext.APPLICATION_SCOPE);
         initializeAccessManager(PageContext.APPLICATION_SCOPE, false);
@@ -104,6 +117,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         verify(accessManager).isAccessible(getAccessType(), entity);
     }
 
+    @Test
     public void testNoEntity() {
         initializeAccessManager(PageContext.PAGE_SCOPE, true);
         try {
@@ -114,6 +128,7 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         }
     }
 
+    @Test
     public void testNoAccessManager() {
         initializeEntity(PageContext.PAGE_SCOPE);
         try {
@@ -124,26 +139,26 @@ public abstract class AbstractEntityTagTestCase extends TestCase {
         }
     }
 
-    public void initializeEntity(int scope) {
+    private void initializeEntity(int scope) {
         initializeEntity(entity, scope);
     }
 
-    public void initializeEntity(Object entity, int scope) {
+    private void initializeEntity(Object entity, int scope) {
         pageContext.setAttribute(entityTag.getEntity(), entity, scope);
     }
 
-    public void initializeAccessManager(int scope, boolean accessible) {
+    private void initializeAccessManager(int scope, boolean accessible) {
         initializeAccessManager(accessManager, scope, accessible);
     }
 
-    public void initializeAccessManager(AccessManager accessManager, int scope, boolean accessible) {
+    private void initializeAccessManager(AccessManager accessManager, int scope, boolean accessible) {
         if (accessManager != null) {
             pageContext.setAttribute("accessManager", accessManager, scope);
             when(accessManager.isAccessible(getAccessType(), entity)).thenReturn(accessible);
         }
     }
 
-    public abstract AbstractEntityTag createEntityTag();
+    protected abstract AbstractEntityTag createEntityTag();
 
-    public abstract AccessType getAccessType();
+    protected abstract AccessType getAccessType();
 }

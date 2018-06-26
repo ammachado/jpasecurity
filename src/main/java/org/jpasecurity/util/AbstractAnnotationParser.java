@@ -16,9 +16,6 @@
 package org.jpasecurity.util;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -31,48 +28,41 @@ import java.util.Collections;
  */
 public abstract class AbstractAnnotationParser<A extends Annotation, D> {
 
-    private Collection<Class<A>> annotationTypes;
+    private final Collection<Class<A>> annotationTypes;
 
     /**
-     * Creates an annotation parser that extracts the annotation to parse from
-     * the generic type argument of the class.
-     * @throws IllegalStateException if the annotation cannot be extracted
+     * Creates an annotation parser for the specified annotation.
      */
-    protected AbstractAnnotationParser() {
-        annotationTypes = Collections.singleton(extractAnnotationType());
-    }
-
-    /**
-     * Creates an annotation parser for the specified annotations.
-     */
-    protected AbstractAnnotationParser(Class<A>... annotationTypes) {
-        this.annotationTypes = Arrays.asList(annotationTypes);
+    protected AbstractAnnotationParser(Class<A> annotationTypes) {
+        this.annotationTypes = Collections.singletonList(annotationTypes);
     }
 
     /**
      * Parses the specified classes for the annotation(s).
      */
-    protected void parse(Class<?>[] classes, D data) {
+    protected D parse(Class<?>[] classes, D data) {
         for (Class<?> annotatedClass: classes) {
             parse(annotatedClass, data);
         }
+        return data;
     }
 
     /**
      * Parses the specified classes for the annotation(s).
      */
-    protected void parse(Collection<Class<?>> classes, D data) {
+    protected D parse(Collection<Class<?>> classes, D data) {
         for (Class<?> annotatedClass : classes) {
             parse(annotatedClass, data);
         }
+        return data;
     }
 
     /**
      * Parses the specified class for the annotation(s).
      */
-    protected void parse(Class<?> annotatedClass, D data) {
+    protected D parse(Class<?> annotatedClass, D data) {
         if (annotatedClass == null) {
-            return;
+            return data;
         }
         parse(annotatedClass.getSuperclass(), data);
         for (Class<?> annotatedInterface: annotatedClass.getInterfaces()) {
@@ -84,6 +74,7 @@ public abstract class AbstractAnnotationParser<A extends Annotation, D> {
                 process(annotatedClass, annotation, data);
             }
         }
+        return data;
     }
 
     /**
@@ -113,29 +104,5 @@ public abstract class AbstractAnnotationParser<A extends Annotation, D> {
      * @param annotation the found annotation
      */
     protected void process(A annotation) {
-    }
-
-    private Class<A> extractAnnotationType() {
-        Type type = getClass().getGenericSuperclass();
-        while (!(type instanceof ParameterizedType)
-            || !AbstractAnnotationParser.class.equals(((ParameterizedType)type).getRawType())) {
-            type = getSupertype(type);
-        }
-        Type annotationType = ((ParameterizedType)type).getActualTypeArguments()[0];
-        if (annotationType instanceof Class) {
-            return (Class<A>)annotationType;
-        } else {
-            throw new IllegalStateException("Could not determine annotation type. Please specifiy by constructor.");
-        }
-    }
-
-    private Type getSupertype(Type type) {
-        if (type instanceof Class) {
-            return ((Class<?>)type).getGenericSuperclass();
-        } else if (type instanceof ParameterizedType) {
-            return getSupertype(((ParameterizedType)type).getRawType());
-        } else {
-            throw new IllegalStateException("Could not determine annotation type. Please specifiy by constructor.");
-        }
     }
 }

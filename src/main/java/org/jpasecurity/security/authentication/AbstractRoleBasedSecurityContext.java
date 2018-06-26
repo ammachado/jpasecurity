@@ -40,8 +40,9 @@ public abstract class AbstractRoleBasedSecurityContext implements SecurityContex
     public static final Alias CURRENT_PRINCIPAL = alias("CURRENT_PRINCIPAL");
     public static final Alias CURRENT_ROLES = alias("CURRENT_ROLES");
     public static final Collection<Alias> ALIASES = unmodifiableCollection(asList(CURRENT_PRINCIPAL, CURRENT_ROLES));
-    private Set<String> roles = new HashSet<String>();
+    private Set<String> roles = new HashSet<>();
 
+    @Override
     public Collection<Alias> getAliases() {
         return ALIASES;
     }
@@ -71,7 +72,7 @@ public abstract class AbstractRoleBasedSecurityContext implements SecurityContex
     }
 
     public Collection<String> getRoles() {
-        List<String> filteredRoles = new ArrayList<String>();
+        List<String> filteredRoles = new ArrayList<>();
         for (String role: roles) {
             if (isCallerInRole(role)) {
                 filteredRoles.add(role);

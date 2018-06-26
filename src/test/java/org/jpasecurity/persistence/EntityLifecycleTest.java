@@ -19,30 +19,27 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.persistence.EntityTransaction;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
-
+import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.model.FieldAccessAnnotationTestBean;
 import org.jpasecurity.model.acl.Group;
 import org.jpasecurity.model.acl.User;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
  * @author Arne Limburg
  */
-@Ignore
 public class EntityLifecycleTest {
 
     public static final String USER = "user";
 
-    private EntityManagerFactory entityManagerFactory;
-    private EntityManager entityManager;
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("entity-lifecycle-test");
 
     @Test
     public void persist() {
@@ -50,7 +47,7 @@ public class EntityLifecycleTest {
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
 
         assertLifecycleCount(bean, 0);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
 
         closeEntityManager();
 
@@ -64,7 +61,7 @@ public class EntityLifecycleTest {
         FieldAccessAnnotationTestBean parent = child.getParentBean();
 
         assertLifecycleCount(child, 0);
-        entityManager.persist(parent);
+        ENTITY_MANAGER.persist(parent);
 
         closeEntityManager();
 
@@ -75,12 +72,12 @@ public class EntityLifecycleTest {
     public void existingCascadePersist() {
         openEntityManager();
         FieldAccessAnnotationTestBean parent = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(parent);
+        ENTITY_MANAGER.persist(parent);
         closeEntityManager();
 
         openEntityManager();
 
-        parent = entityManager.find(FieldAccessAnnotationTestBean.class, parent.getIdentifier());
+        parent = ENTITY_MANAGER.find(FieldAccessAnnotationTestBean.class, parent.getIdentifier());
         FieldAccessAnnotationTestBean child = createChild(parent);
         assertLifecycleCount(child, 0);
 
@@ -93,16 +90,16 @@ public class EntityLifecycleTest {
     public void persistCascadeMerge() {
         openEntityManager();
         FieldAccessAnnotationTestBean child = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(child);
+        ENTITY_MANAGER.persist(child);
         closeEntityManager();
 
         openEntityManager();
-        child = entityManager.merge(child);
+        child = ENTITY_MANAGER.merge(child);
         FieldAccessAnnotationTestBean parent = new FieldAccessAnnotationTestBean(USER);
         parent.getChildBeans().add(child);
         child.setParentBean(parent);
 
-        entityManager.persist(parent);
+        ENTITY_MANAGER.persist(parent);
 
         closeEntityManager();
 
@@ -115,7 +112,7 @@ public class EntityLifecycleTest {
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
 
         assertLifecycleCount(bean, 0);
-        bean = entityManager.merge(bean);
+        bean = ENTITY_MANAGER.merge(bean);
 
         closeEntityManager();
 
@@ -126,7 +123,7 @@ public class EntityLifecycleTest {
     public void cascadeMergeNew() {
         openEntityManager();
         FieldAccessAnnotationTestBean parent = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(parent);
+        ENTITY_MANAGER.persist(parent);
         closeEntityManager();
 
         openEntityManager();
@@ -134,7 +131,7 @@ public class EntityLifecycleTest {
 
         assertLifecycleCount(child, 0);
 
-        parent = entityManager.merge(parent);
+        parent = ENTITY_MANAGER.merge(parent);
         child = parent.getChildBeans().iterator().next();
 
         closeEntityManager();
@@ -146,14 +143,14 @@ public class EntityLifecycleTest {
     public void remove() {
         openEntityManager();
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
         closeEntityManager();
 
         openEntityManager();
 
-        bean = entityManager.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
+        bean = ENTITY_MANAGER.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
         assertLifecycleCount(bean, 0, 0, 0, 1);
-        entityManager.remove(bean);
+        ENTITY_MANAGER.remove(bean);
 
         closeEntityManager();
 
@@ -166,8 +163,8 @@ public class EntityLifecycleTest {
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
 
         assertLifecycleCount(bean, 0, 0, 0, 0);
-        entityManager.persist(bean);
-        entityManager.remove(bean);
+        ENTITY_MANAGER.persist(bean);
+        ENTITY_MANAGER.remove(bean);
 
         closeEntityManager();
 
@@ -179,9 +176,9 @@ public class EntityLifecycleTest {
         openEntityManager();
         FieldAccessAnnotationTestBean child = createChild();
         FieldAccessAnnotationTestBean parent = child.getParentBean();
-        entityManager.persist(parent);
+        ENTITY_MANAGER.persist(parent);
         child = parent.getChildBeans().iterator().next();
-        entityManager.remove(parent);
+        ENTITY_MANAGER.remove(parent);
 
         closeEntityManager();
 
@@ -193,15 +190,15 @@ public class EntityLifecycleTest {
         openEntityManager();
         FieldAccessAnnotationTestBean child = createChild();
         FieldAccessAnnotationTestBean parent = child.getParentBean();
-        entityManager.persist(parent);
+        ENTITY_MANAGER.persist(parent);
         closeEntityManager();
 
         openEntityManager();
 
-        parent = entityManager.find(FieldAccessAnnotationTestBean.class, parent.getIdentifier());
+        parent = ENTITY_MANAGER.find(FieldAccessAnnotationTestBean.class, parent.getIdentifier());
         child = parent.getChildBeans().iterator().next();
         assertLifecycleCount(child, 0, 0, 0, 1);
-        entityManager.remove(parent);
+        ENTITY_MANAGER.remove(parent);
 
         closeEntityManager();
 
@@ -212,12 +209,12 @@ public class EntityLifecycleTest {
     public void update() {
         openEntityManager();
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
         closeEntityManager();
 
         openEntityManager();
 
-        bean = entityManager.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
+        bean = ENTITY_MANAGER.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
         assertLifecycleCount(bean, 0, 0, 0, 1);
         createChild(bean);
         closeEntityManager();
@@ -230,13 +227,13 @@ public class EntityLifecycleTest {
         openEntityManager();
         FieldAccessAnnotationTestBean parentBean = new FieldAccessAnnotationTestBean(USER);
         FieldAccessAnnotationTestBean childBean = new FieldAccessAnnotationTestBean(USER, parentBean);
-        entityManager.persist(childBean);
-        entityManager.persist(parentBean);
+        ENTITY_MANAGER.persist(childBean);
+        ENTITY_MANAGER.persist(parentBean);
         closeEntityManager();
 
         openEntityManager();
 
-        childBean = entityManager.find(FieldAccessAnnotationTestBean.class, childBean.getIdentifier());
+        childBean = ENTITY_MANAGER.find(FieldAccessAnnotationTestBean.class, childBean.getIdentifier());
         FieldAccessAnnotationTestBean newParentBeanWithSameIdentifier = new FieldAccessAnnotationTestBean(USER);
         newParentBeanWithSameIdentifier.setIdentifier(parentBean.getIdentifier());
         childBean.setParentBean(newParentBeanWithSameIdentifier);
@@ -249,11 +246,11 @@ public class EntityLifecycleTest {
     public void updateNullReference() {
         openEntityManager();
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
         closeEntityManager();
 
         openEntityManager();
-        bean = entityManager.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
+        bean = ENTITY_MANAGER.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
         closeEntityManager();
 
         assertLifecycleCount(bean, 0, 0, 0, 1);
@@ -263,12 +260,12 @@ public class EntityLifecycleTest {
     public void merge() {
         openEntityManager();
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
         closeEntityManager();
 
         openEntityManager();
 
-        bean = entityManager.merge(bean);
+        bean = ENTITY_MANAGER.merge(bean);
         assertLifecycleCount(bean, 0, 0, 0, 1);
         createChild(bean);
         closeEntityManager();
@@ -280,14 +277,14 @@ public class EntityLifecycleTest {
     public void mergeModified() {
         openEntityManager();
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
         closeEntityManager();
 
         openEntityManager();
 
         createChild(bean);
         assertLifecycleCount(bean, 1, 0, 0, 0);
-        bean = entityManager.merge(bean);
+        bean = ENTITY_MANAGER.merge(bean);
         closeEntityManager();
 
         assertLifecycleCount(bean, 0, 0, 0, 1);
@@ -297,23 +294,23 @@ public class EntityLifecycleTest {
     public void commitCollectionChanges() {
         openEntityManager();
         User user = new User();
-        entityManager.persist(user);
+        ENTITY_MANAGER.persist(user);
         Group group1 = new Group();
-        entityManager.persist(group1);
+        ENTITY_MANAGER.persist(group1);
         Group group2 = new Group();
-        entityManager.persist(group2);
+        ENTITY_MANAGER.persist(group2);
         Group group3 = new Group();
-        entityManager.persist(group3);
+        ENTITY_MANAGER.persist(group3);
         closeEntityManager();
 
         openEntityManager();
-        final User user1 = entityManager.find(User.class, user.getId());
+        final User user1 = ENTITY_MANAGER.find(User.class, user.getId());
         final List<Group> groups = user1.getGroups();
-        final Group groupToAdd1 = entityManager.find(Group.class, group1.getId());
+        final Group groupToAdd1 = ENTITY_MANAGER.find(Group.class, group1.getId());
         groups.add(groupToAdd1);
         closeEntityManager();
         openEntityManager();
-        final User user2 = entityManager.find(User.class, user.getId());
+        final User user2 = ENTITY_MANAGER.find(User.class, user.getId());
         assertEquals(1, user2.getGroups().size());
         closeEntityManager();
     }
@@ -322,26 +319,26 @@ public class EntityLifecycleTest {
     public void commitReplacedCollection() {
         openEntityManager();
         User user = new User();
-        entityManager.persist(user);
+        ENTITY_MANAGER.persist(user);
         Group group1 = new Group();
-        entityManager.persist(group1);
+        ENTITY_MANAGER.persist(group1);
         Group group2 = new Group();
-        entityManager.persist(group2);
+        ENTITY_MANAGER.persist(group2);
         Group group3 = new Group();
-        entityManager.persist(group3);
+        ENTITY_MANAGER.persist(group3);
         closeEntityManager();
 
         openEntityManager();
-        final User user1 = entityManager.find(User.class, user.getId());
-        final ArrayList<Group> groupsReplacement = new ArrayList<Group>();
+        final User user1 = ENTITY_MANAGER.find(User.class, user.getId());
+        final ArrayList<Group> groupsReplacement = new ArrayList<>();
         user1.setGroups(groupsReplacement);
-        final Group groupToAdd1 = entityManager.find(Group.class, group1.getId());
-        final Group groupToAdd2 = entityManager.find(Group.class, group2.getId());
+        final Group groupToAdd1 = ENTITY_MANAGER.find(Group.class, group1.getId());
+        final Group groupToAdd2 = ENTITY_MANAGER.find(Group.class, group2.getId());
         groupsReplacement.add(groupToAdd1);
         groupsReplacement.add(groupToAdd2);
         closeEntityManager();
         openEntityManager();
-        final User user2 = entityManager.find(User.class, user.getId());
+        final User user2 = ENTITY_MANAGER.find(User.class, user.getId());
         assertEquals(groupsReplacement.size(), user2.getGroups().size());
         closeEntityManager();
     }
@@ -350,11 +347,11 @@ public class EntityLifecycleTest {
     public void find() {
         openEntityManager();
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
         closeEntityManager();
 
         openEntityManager();
-        bean = entityManager.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
+        bean = ENTITY_MANAGER.find(FieldAccessAnnotationTestBean.class, bean.getIdentifier());
         closeEntityManager();
 
         assertLifecycleCount(bean, 0, 0, 0, 1);
@@ -364,20 +361,15 @@ public class EntityLifecycleTest {
     public void query() {
         openEntityManager();
         FieldAccessAnnotationTestBean bean = new FieldAccessAnnotationTestBean(USER);
-        entityManager.persist(bean);
+        ENTITY_MANAGER.persist(bean);
         closeEntityManager();
 
         openEntityManager();
         String query = "select b from FieldAccessAnnotationTestBean b";
-        bean = (FieldAccessAnnotationTestBean)entityManager.createQuery(query).getSingleResult();
+        bean = ENTITY_MANAGER.createQuery(query, FieldAccessAnnotationTestBean.class).getSingleResult();
         closeEntityManager();
 
         assertLifecycleCount(bean, 0, 0, 0, 1);
-    }
-
-    @Before
-    public void createEntityManagerFactory() {
-        entityManagerFactory = Persistence.createEntityManagerFactory("entity-lifecycle-test");
     }
 
     @Before
@@ -390,41 +382,41 @@ public class EntityLifecycleTest {
         TestSecurityContext.authenticate(null);
     }
 
-    @After
-    public void closeEntityManagerFactory() {
-        entityManagerFactory.close();
-    }
-
-    public FieldAccessAnnotationTestBean createChild() {
+    private static FieldAccessAnnotationTestBean createChild() {
         return createChild(new FieldAccessAnnotationTestBean(USER));
     }
 
-    public FieldAccessAnnotationTestBean createChild(FieldAccessAnnotationTestBean parent) {
+    private static FieldAccessAnnotationTestBean createChild(FieldAccessAnnotationTestBean parent) {
         FieldAccessAnnotationTestBean child = new FieldAccessAnnotationTestBean(USER);
         child.setParentBean(parent);
         parent.getChildBeans().add(child);
         return child;
     }
 
-    public void openEntityManager() {
-        entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
+    private static void openEntityManager() {
+        final EntityTransaction transaction = ENTITY_MANAGER.getTransaction();
+        if (!transaction.isActive()) {
+            transaction.begin();
+        }
     }
 
-    public void closeEntityManager() {
-        entityManager.getTransaction().commit();
-        entityManager.close();
+    private static void closeEntityManager() {
+        final EntityTransaction transaction = ENTITY_MANAGER.getTransaction();
+        if (transaction.isActive()) {
+            transaction.commit();
+        }
+        ENTITY_MANAGER.close();
     }
 
-    private void assertLifecycleCount(FieldAccessAnnotationTestBean bean, int count) {
+    private static void assertLifecycleCount(FieldAccessAnnotationTestBean bean, int count) {
         assertLifecycleCount(bean, count, count, count, count);
     }
 
-    private void assertLifecycleCount(FieldAccessAnnotationTestBean bean,
-                                      int persistCount,
-                                      int removeCount,
-                                      int updateCount,
-                                      int loadCount) {
+    private static void assertLifecycleCount(FieldAccessAnnotationTestBean bean,
+                                             int persistCount,
+                                             int removeCount,
+                                             int updateCount,
+                                             int loadCount) {
         assertEquals("wrong prePersistCount", persistCount, bean.getPrePersistCount());
         assertEquals("wrong postPersistCount", persistCount, bean.getPostPersistCount());
         assertEquals("wrong preRemoveCount", removeCount, bean.getPreRemoveCount());

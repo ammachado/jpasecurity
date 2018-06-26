@@ -17,8 +17,12 @@ package org.jpasecurity.jpql.parser;
 
 public class ToJpqlStringVisitor extends ToStringVisitor {
 
+    public ToJpqlStringVisitor(StringBuilder sb) {
+        super(sb);
+    }
+
     @Override
-    public boolean visit(JpqlHint node, StringBuilder query) {
-        return false;
+    public StringBuilder visitHintStatement(JpqlParser.HintStatementContext ctx) {
+        return super.defaultResult();
     }
 }

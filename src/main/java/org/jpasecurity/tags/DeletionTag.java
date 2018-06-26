@@ -22,6 +22,9 @@ import org.jpasecurity.AccessType;
  */
 public class DeletionTag extends AbstractEntityTag {
 
+    private static final long serialVersionUID = -8458968408866377388L;
+
+    @Override
     protected AccessType getAccessType() {
         return AccessType.DELETE;
     }

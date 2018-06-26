@@ -38,6 +38,7 @@ public class Sid {
     @Id
     @GeneratedValue
     private long id;
+
     @Column(name = "sid")
     private String name;
 
@@ -58,6 +59,7 @@ public class Sid {
         return name;
     }
 
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof Sid)) {
             return false;
@@ -66,6 +68,7 @@ public class Sid {
         return getName().equals(sid.getName());
     }
 
+    @Override
     public int hashCode() {
         return name.hashCode();
     }

@@ -41,9 +41,9 @@ public class MethodAccessAnnotationTestBean {
     private int identifier;
     private String beanName;
     private MethodAccessAnnotationTestBean parentBean;
-    private List<MethodAccessAnnotationTestBean> childBeans = new ArrayList<MethodAccessAnnotationTestBean>();
-    private int namePropertyReadCount = 0;
-    private int namePropertyWriteCount = 0;
+    private List<MethodAccessAnnotationTestBean> childBeans = new ArrayList<>();
+    private int namePropertyReadCount;
+    private int namePropertyWriteCount;
 
     public MethodAccessAnnotationTestBean() {
     }
@@ -108,10 +108,12 @@ public class MethodAccessAnnotationTestBean {
         childBeans = children;
     }
 
+    @Override
     public int hashCode() {
         return getId() == 0? System.identityHashCode(this): getId();
     }
 
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof MethodAccessAnnotationTestBean)) {
             return false;

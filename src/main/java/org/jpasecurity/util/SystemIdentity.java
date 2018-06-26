@@ -18,6 +18,7 @@ package org.jpasecurity.util;
 /**
  * A class that can be used as key for {@link java.util.Map}s, when
  * {@link java.lang.System#identityHashCode(Object)} and == shall be used.
+ *
  * @author Arne Limburg
  */
 public class SystemIdentity {
@@ -32,6 +33,7 @@ public class SystemIdentity {
         return object;
     }
 
+    @Override
     public boolean equals(Object object) {
         if (!(object instanceof SystemIdentity)) {
             return false;
@@ -40,6 +42,7 @@ public class SystemIdentity {
         return this.object == systemMapKey.object;
     }
 
+    @Override
     public int hashCode() {
         return System.identityHashCode(object);
     }

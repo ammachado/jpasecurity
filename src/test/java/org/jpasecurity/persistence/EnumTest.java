@@ -20,15 +20,14 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
 import javax.persistence.RollbackException;
 
+import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.model.Task;
 import org.jpasecurity.model.TaskStatus;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -36,42 +35,40 @@ import org.junit.Test;
  */
 public class EnumTest {
 
-    private EntityManager entityManager;
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("task");
 
     @Before
     public void createTestData() {
-        EntityManagerFactory entityManagerFactory
-            = Persistence.createEntityManagerFactory("task");
-        entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         Task closedTask = new Task("Closed Task");
-        entityManager.persist(closedTask);
-        entityManager.persist(new Task("Open Task"));
-        entityManager.getTransaction().commit();
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.persist(closedTask);
+        ENTITY_MANAGER.persist(new Task("Open Task"));
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.getTransaction().begin();
         closedTask.setStatus(TaskStatus.CLOSED);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
     }
 
     @After
     public void closeEntityManager() {
-        if (entityManager.getTransaction().isActive()) {
-            entityManager.getTransaction().rollback();
+        if (ENTITY_MANAGER.getTransaction().isActive()) {
+            ENTITY_MANAGER.getTransaction().rollback();
         }
-        entityManager.close();
-        entityManager.getEntityManagerFactory().close();
+        ENTITY_MANAGER.close();
+        ENTITY_MANAGER.getEntityManagerFactory().close();
     }
 
     @Test
     public void create() {
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         Task createdTask = new Task("Created Task");
-        entityManager.persist(createdTask);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
+        ENTITY_MANAGER.persist(createdTask);
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
 
-        Task foundTask = entityManager.createQuery("SELECT t FROM Task t WHERE t.name = 'Created Task'", Task.class)
+        Task foundTask = ENTITY_MANAGER.createQuery("SELECT t FROM Task t WHERE t.name = 'Created Task'", Task.class)
                 .getSingleResult();
         assertThat(foundTask, is(createdTask));
     }
@@ -79,42 +76,42 @@ public class EnumTest {
     @Test
     public void createFails() {
         try {
-            entityManager.getTransaction().begin();
+            ENTITY_MANAGER.getTransaction().begin();
             Task createdTask = new Task("Created Closed Task");
             createdTask.setStatus(TaskStatus.CLOSED);
-            entityManager.persist(createdTask);
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.persist(createdTask);
+            ENTITY_MANAGER.getTransaction().commit();
             fail("expected SecurityException");
         } catch (SecurityException e) {
-            assertThat(entityManager.getTransaction().getRollbackOnly(), is(true));
+            assertThat(ENTITY_MANAGER.getTransaction().getRollbackOnly(), is(true));
         }
     }
 
     @Test
     public void read() {
-        Task foundTask = entityManager.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
+        Task foundTask = ENTITY_MANAGER.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
         assertThat(foundTask.getName(), is("Open Task"));
     }
 
     @Test
     public void update() {
-        Task updateTask = entityManager.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
+        Task updateTask = ENTITY_MANAGER.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
 
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         updateTask.setStatus(TaskStatus.CLOSED);
-        entityManager.getTransaction().commit();
+        ENTITY_MANAGER.getTransaction().commit();
 
         assertThat(updateTask.getStatus(), is(TaskStatus.CLOSED));
     }
 
     @Test
     public void updateFails() {
-        Task updateTask = entityManager.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
+        Task updateTask = ENTITY_MANAGER.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
 
         try {
-            entityManager.getTransaction().begin();
+            ENTITY_MANAGER.getTransaction().begin();
             updateTask.setStatus(null);
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.getTransaction().commit();
             fail("expected SecurityException");
         } catch (RollbackException e) {
             assertThat(e.getCause(), is(instanceOf(SecurityException.class)));
@@ -123,41 +120,41 @@ public class EnumTest {
 
     @Test
     public void deleteClosed() {
-        Task deleteTask = entityManager.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
+        Task deleteTask = ENTITY_MANAGER.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
 
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         deleteTask.setStatus(TaskStatus.CLOSED);
-        entityManager.remove(deleteTask);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
+        ENTITY_MANAGER.remove(deleteTask);
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
 
-        assertThat(entityManager.createQuery("SELECT t FROM Task t").getResultList().size(), is(0));
+        assertThat(ENTITY_MANAGER.createQuery("SELECT t FROM Task t").getResultList().size(), is(0));
     }
 
     @Test
     public void deleteNullStatus() {
-        Task deleteTask = entityManager.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
+        Task deleteTask = ENTITY_MANAGER.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
 
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         deleteTask.setStatus(null);
-        entityManager.remove(deleteTask);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
+        ENTITY_MANAGER.remove(deleteTask);
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
 
-        assertThat(entityManager.createQuery("SELECT t FROM Task t").getResultList().size(), is(0));
+        assertThat(ENTITY_MANAGER.createQuery("SELECT t FROM Task t").getResultList().size(), is(0));
     }
 
     @Test
     public void deleteFails() {
-        Task deleteTask = entityManager.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
+        Task deleteTask = ENTITY_MANAGER.createQuery("SELECT t FROM Task t", Task.class).getSingleResult();
 
         try {
-            entityManager.getTransaction().begin();
-            entityManager.remove(deleteTask);
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.getTransaction().begin();
+            ENTITY_MANAGER.remove(deleteTask);
+            ENTITY_MANAGER.getTransaction().commit();
             fail("expected SecurityException");
         } catch (SecurityException e) {
-            assertThat(entityManager.getTransaction().getRollbackOnly(), is(true));
+            assertThat(ENTITY_MANAGER.getTransaction().getRollbackOnly(), is(true));
         }
     }
 }

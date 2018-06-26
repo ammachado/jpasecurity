@@ -24,29 +24,29 @@ import org.jpasecurity.TestEntityManager;
 import org.jpasecurity.model.EagerParent;
 import org.jpasecurity.model.LazyChild;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 public class LazyOneToOneTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("lazy-one-to-one");
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("lazy-one-to-one");
 
     private LazyChild child;
 
     @Before
     public void createTestData() {
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         child = new LazyChild(new EagerParent());
-        entityManager.persist(child);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
+        ENTITY_MANAGER.persist(child);
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
     }
 
     @Test
     public void load() {
-        LazyChild foundChild = entityManager.find(LazyChild.class, child.getId());
-        EntityManagerFactory entityManagerFactory = entityManager.getEntityManagerFactory();
+        LazyChild foundChild = ENTITY_MANAGER.find(LazyChild.class, child.getId());
+        EntityManagerFactory entityManagerFactory = ENTITY_MANAGER.getEntityManagerFactory();
         assertThat(entityManagerFactory.getPersistenceUnitUtil().isLoaded(foundChild, "parent"), is(false));
 
         assertThat(foundChild.getParent().getChild(), is(foundChild));

@@ -18,6 +18,7 @@ package org.jpasecurity.security.rules;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,15 +29,15 @@ import java.util.HashSet;
 
 import javax.persistence.metamodel.BasicType;
 import javax.persistence.metamodel.EntityType;
+import javax.persistence.metamodel.ManagedType;
 import javax.persistence.metamodel.Metamodel;
 import javax.persistence.metamodel.SingularAttribute;
 import javax.persistence.metamodel.Type.PersistenceType;
 
 import org.jpasecurity.Path;
 import org.jpasecurity.SecurityContext;
-import org.jpasecurity.jpql.parser.JpqlAccessRule;
 import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.ParseException;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.model.ChildTestBean;
 import org.jpasecurity.model.MethodAccessTestBean;
 import org.jpasecurity.model.ParentTestBean;
@@ -57,13 +58,13 @@ public class AccessRulesCompilerTest {
         EntityType methodAccessTestBeanType = mock(EntityType.class);
         BasicType stringType = mock(BasicType.class);
         SingularAttribute nameAttribute = mock(SingularAttribute.class);
-        when(metamodel.getManagedTypes()).thenReturn(new HashSet(Arrays.asList(
+        when(metamodel.getManagedTypes()).thenReturn(new HashSet<>(Arrays.<ManagedType<?>>asList(
                 parentTestBeanType, childTestBeanType, methodAccessTestBeanType)));
-        when(metamodel.getEntities()).thenReturn(new HashSet(Arrays.asList(
+        when(metamodel.getEntities()).thenReturn(new HashSet<>(Arrays.<EntityType<?>>asList(
                 parentTestBeanType, childTestBeanType, methodAccessTestBeanType)));
-        when(metamodel.managedType(ParentTestBean.class)).thenReturn(parentTestBeanType);
-        when(metamodel.managedType(ChildTestBean.class)).thenReturn(childTestBeanType);
-        when(metamodel.managedType(MethodAccessTestBean.class)).thenReturn(methodAccessTestBeanType);
+        doReturn(parentTestBeanType).when(metamodel).managedType(ParentTestBean.class);
+        doReturn(childTestBeanType).when(metamodel).managedType(ChildTestBean.class);
+        doReturn(methodAccessTestBeanType).when(metamodel).managedType(MethodAccessTestBean.class);
         when(parentTestBeanType.getName()).thenReturn(ParentTestBean.class.getSimpleName());
         when(parentTestBeanType.getJavaType()).thenReturn(ParentTestBean.class);
         when(parentTestBeanType.getAttribute("name")).thenReturn(nameAttribute);
@@ -77,12 +78,12 @@ public class AccessRulesCompilerTest {
         when(nameAttribute.getJavaType()).thenReturn(String.class);
         when(stringType.getPersistenceType()).thenReturn(PersistenceType.BASIC);
         AccessRulesParser parser
-            = new AccessRulesParser("interface", metamodel, securityContext, new XmlAccessRulesProvider("interface"));
+            = new AccessRulesParser(metamodel, securityContext, new XmlAccessRulesProvider("interface"));
         assertEquals(2, parser.parseAccessRules().size());
     }
 
     @Test
-    public void ruleWithSubselect() throws ParseException {
+    public void ruleWithSubselect() {
         String rule = " GRANT READ ACCESS TO ClientDetails cd "
                     + " WHERE cd.clientRelations.client.id "
                     + " IN (SELECT cs.client.id FROM ClientStaffing cs, ClientStatus cst, Employee e "
@@ -94,10 +95,9 @@ public class AccessRulesCompilerTest {
         when(metamodel.getEntities()).thenReturn(Collections.<EntityType<?>>singleton(clientTradeImportMonitorType));
         when(clientTradeImportMonitorType.getName()).thenReturn(ClientDetails.class.getSimpleName());
         when(clientTradeImportMonitorType.getJavaType()).thenReturn(ClientDetails.class);
-        JpqlParser parser = new JpqlParser();
         AccessRulesCompiler compiler = new AccessRulesCompiler(metamodel);
 
-        JpqlAccessRule accessRule = parser.parseRule(rule);
+        JpqlParser.AccessRuleContext accessRule = JpqlParsingHelper.parseAccessRule(rule);
         Collection<AccessRule> compiledRules = compiler.compile(accessRule);
         assertThat(compiledRules.size(), is(1));
         AccessRule compiledRule = compiledRules.iterator().next();

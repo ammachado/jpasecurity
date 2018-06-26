@@ -34,15 +34,14 @@ import org.jpasecurity.model.client.ProcessInstanceProcessTaskInstance;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /** @author Arne Limburg */
 public class ClientTest {
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("client");
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("client");
 
     private static final String EMAIL = "test@test.org";
 
@@ -82,25 +81,24 @@ public class ClientTest {
         ProcessInstanceProcessTaskInstance processInstanceProcessTaskInstance =
             new ProcessInstanceProcessTaskInstance(clientProcessInstance, clientTask);
 
-        entityManager.getTransaction().begin();
-        active = entityManager.merge(active);
-        closed = entityManager.merge(closed);
-        entityManager.persist(parent);
-        entityManager.persist(parentTracking);
-        entityManager.persist(employee);
-        entityManager.persist(client);
-        entityManager.persist(clientStaffing);
+        active = ENTITY_MANAGER.merge(active);
+        closed = ENTITY_MANAGER.merge(closed);
+        ENTITY_MANAGER.persist(parent);
+        ENTITY_MANAGER.persist(parentTracking);
+        ENTITY_MANAGER.persist(employee);
+        ENTITY_MANAGER.persist(client);
+        ENTITY_MANAGER.persist(clientStaffing);
         tracking.setClient(client);
         client.setOperationsTracking(tracking);
-        entityManager.persist(tracking);
+        ENTITY_MANAGER.persist(tracking);
 
-        entityManager.persist(clientProcessInstance);
-        entityManager.persist(clientTask);
-        entityManager.persist(processInstanceProcessTaskInstance);
+        ENTITY_MANAGER.persist(clientProcessInstance);
+        ENTITY_MANAGER.persist(clientTask);
+        ENTITY_MANAGER.persist(processInstanceProcessTaskInstance);
 
-        entityManager.getTransaction().commit();
+        ENTITY_MANAGER.getTransaction().commit();
 
-        entityManager.close();
+        ENTITY_MANAGER.close();
 
         clientId = client.getId();
         operationsTrackingId = tracking.getId();
@@ -118,70 +116,69 @@ public class ClientTest {
     @Test
     public void access() {
         TestSecurityContext.authenticate(EMAIL);
-        Client client = entityManager.find(Client.class, clientId);
+        Client client = ENTITY_MANAGER.find(Client.class, clientId);
         assertNotNull(client);
-        entityManager.getTransaction().begin();
-        client.setCurrentStatus(entityManager.merge(active));
-        entityManager.getTransaction().commit();
-        entityManager.close();
+        ENTITY_MANAGER.getTransaction().begin();
+        client.setCurrentStatus(ENTITY_MANAGER.merge(active));
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.close();
 
-        assertNotNull(entityManager.find(Client.class, clientId));
+        assertNotNull(ENTITY_MANAGER.find(Client.class, clientId));
     }
 
     @Test(expected = SecurityException.class)
     public void wrongEmail() {
         TestSecurityContext.authenticate("wrong@email.org");
-        assertNotNull(entityManager.find(Client.class, clientId));
+        assertNotNull(ENTITY_MANAGER.find(Client.class, clientId));
     }
 
     @Test(expected = SecurityException.class)
     public void wrongStatus() {
         TestSecurityContext.authenticate(EMAIL);
-        Client client = entityManager.find(Client.class, clientId);
+        Client client = ENTITY_MANAGER.find(Client.class, clientId);
         assertNotNull(client);
-        entityManager.getTransaction().begin();
-        entityManager.createQuery("UPDATE Client c SET c.currentStatus = :status WHERE c.id = :id")
+        ENTITY_MANAGER.getTransaction().begin();
+        ENTITY_MANAGER.createQuery("UPDATE Client c SET c.currentStatus = :status WHERE c.id = :id")
             .setParameter("id", clientId)
-            .setParameter("status", entityManager.merge(closed))
+            .setParameter("status", ENTITY_MANAGER.merge(closed))
             .executeUpdate();
-        entityManager.getTransaction().commit();
-        entityManager.close();
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.close();
 
         try {
-            entityManager.getTransaction().begin();
-            Client foundClient = entityManager.find(Client.class, clientId);
+            ENTITY_MANAGER.getTransaction().begin();
+            Client foundClient = ENTITY_MANAGER.find(Client.class, clientId);
             foundClient.setAnotherProperty("new value");
-            entityManager.getTransaction().commit();
+            ENTITY_MANAGER.getTransaction().commit();
         } finally {
-            if (entityManager.getTransaction().isActive()) {
-                entityManager.getTransaction().rollback();
+            if (ENTITY_MANAGER.getTransaction().isActive()) {
+                ENTITY_MANAGER.getTransaction().rollback();
             }
-            entityManager.close();
-            entityManager.getTransaction().begin();
-            entityManager.createQuery("UPDATE Client c SET c.currentStatus = :status WHERE c.id = :id")
+            ENTITY_MANAGER.close();
+            ENTITY_MANAGER.getTransaction().begin();
+            ENTITY_MANAGER.createQuery("UPDATE Client c SET c.currentStatus = :status WHERE c.id = :id")
                 .setParameter("id", clientId)
-                .setParameter("status", entityManager.merge(active))
+                .setParameter("status", ENTITY_MANAGER.merge(active))
                 .executeUpdate();
-            entityManager.getTransaction().commit();
-            entityManager.close();
+            ENTITY_MANAGER.getTransaction().commit();
+            ENTITY_MANAGER.close();
         }
     }
 
     @Test
     public void query() {
         TestSecurityContext.authenticate(EMAIL);
-        List<Client> clients = entityManager.createQuery("SELECT cl FROM Client cl WHERE cl.id = :id",
-            Client.class)
-            .setParameter("id", clientId)
-            .getResultList();
+        List<Client> clients = ENTITY_MANAGER
+                .createQuery("SELECT cl FROM Client cl WHERE cl.id = :id", Client.class)
+                .setParameter("id", clientId)
+                .getResultList();
         assertEquals(1, clients.size());
     }
 
     @Test
-    @Ignore
     public void queryOperationsTracking() {
         TestSecurityContext.authenticate(EMAIL);
-        List<ClientOperationsTracking> tracking = entityManager
+        List<ClientOperationsTracking> tracking = ENTITY_MANAGER
             .createQuery("SELECT t FROM ClientOperationsTracking t WHERE t.id = :id",
                 ClientOperationsTracking.class)
             .setParameter("id", operationsTrackingId)
@@ -198,28 +195,28 @@ public class ClientTest {
     @Test
     public void testIdAndNameDtoGetSingleResult() {
         TestSecurityContext.authenticate(EMAIL);
-        List<IdAndNameDto> idAndNameDtoList = entityManager
-            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME).getResultList();
+        List<IdAndNameDto> idAndNameDtoList = ENTITY_MANAGER
+            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getResultList();
         assertEquals(1, idAndNameDtoList.size());
         assertEquals(IdAndNameDto.class, idAndNameDtoList.get(0).getClass());
         assertEquals(clientId, idAndNameDtoList.get(0).getId().intValue());
 
         IdAndNameDto dto
-            = entityManager.createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getSingleResult();
+            = ENTITY_MANAGER.createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getSingleResult();
         assertEquals(clientId, dto.getId().intValue());
     }
 
     @Test
     public void testIdAndNameDtoGetResultList() {
         TestSecurityContext.authenticate(EMAIL);
-        List<IdAndNameDto> idAndNameDtoList = entityManager
-            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME).getResultList();
+        List<IdAndNameDto> idAndNameDtoList = ENTITY_MANAGER
+            .createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getResultList();
         assertEquals(1, idAndNameDtoList.size());
         assertEquals(IdAndNameDto.class, idAndNameDtoList.get(0).getClass());
         assertEquals(clientId, idAndNameDtoList.get(0).getId().intValue());
 
         IdAndNameDto dto
-            = entityManager.createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getResultList().get(0);
+            = ENTITY_MANAGER.createNamedQuery(Client.FIND_ALL_ID_AND_NAME, IdAndNameDto.class).getResultList().get(0);
         assertEquals(clientId, dto.getId().intValue());
     }
 }

@@ -19,10 +19,11 @@ import java.util.Date;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.ForeignKey;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.ForeignKey;
 
 /**
  *
@@ -33,7 +34,7 @@ import org.hibernate.annotations.ForeignKey;
 public class ClientProcessInstance extends ProcessInstance {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @ForeignKey(name = "FK_process_instance_client_id")
+    @JoinColumn(foreignKey = @ForeignKey(name = "FK_process_instance_client_id"))
     @Fetch(FetchMode.JOIN)
     private Client client;
 

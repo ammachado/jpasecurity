@@ -57,7 +57,7 @@ public class SecurePersistenceProviderTest {
 
     @Test
     public void overriddenPersistenceProvider() {
-        Map<String, String> persistenceProperties = new HashMap<String, String>();
+        Map<String, String> persistenceProperties = new HashMap<>();
         persistenceProperties.put(SecurePersistenceProvider.PERSISTENCE_PROVIDER_PROPERTY,
                                   SecurePersistenceProvider.class.getName());
         assertNotNull(securePersistenceProvider.createEntityManagerFactory("hibernate", persistenceProperties));
@@ -109,15 +109,15 @@ public class SecurePersistenceProviderTest {
         ));
         when(persistenceUnitInfo.excludeUnlistedClasses()).thenReturn(true);
         Properties properties = new Properties();
-        properties.put("org.jpasecurity.persistence.provider", "org.hibernate.ejb.HibernatePersistence");
+        properties.put("org.jpasecurity.persistence.provider", "org.hibernate.jpa.HibernatePersistenceProvider");
         properties.put("org.jpasecurity.security.context",
                        "org.jpasecurity.security.authentication.TestSecurityContext");
         properties.put("org.jpasecurity.security.rules.provider",
                        "org.jpasecurity.security.rules.XmlAccessRulesProvider");
         properties.put("hibernate.hbm2ddl.auto", "create-drop");
-        properties.put("hibernate.dialect", "org.hibernate.dialect.HSQLDialect");
-        properties.put("hibernate.connection.driver_class", "org.hsqldb.jdbcDriver");
-        properties.put("hibernate.connection.url", "jdbc:hsqldb:mem:test");
+        properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        properties.put("hibernate.connection.driver_class", "org.h2.Driver");
+        properties.put("hibernate.connection.url", "jdbc:h2:mem:test");
         properties.put("hibernate.connection.username", "sa");
         properties.put("hibernate.connection.password", "");
         when(persistenceUnitInfo.getProperties()).thenReturn(properties);

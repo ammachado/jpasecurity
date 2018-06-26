@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-
 package org.jpasecurity.security;
 
 import java.util.ArrayList;
@@ -23,26 +22,17 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import javax.persistence.metamodel.Metamodel;
 
 import org.jpasecurity.AccessType;
 import org.jpasecurity.Alias;
 import org.jpasecurity.Path;
+import org.jpasecurity.jpql.BaseContext;
 import org.jpasecurity.jpql.JpqlCompiledStatement;
 import org.jpasecurity.jpql.TypeDefinition;
-import org.jpasecurity.jpql.parser.JpqlAccessRule;
-import org.jpasecurity.jpql.parser.JpqlCreate;
-import org.jpasecurity.jpql.parser.JpqlDelete;
-import org.jpasecurity.jpql.parser.JpqlFromItem;
-import org.jpasecurity.jpql.parser.JpqlIdentificationVariable;
-import org.jpasecurity.jpql.parser.JpqlIn;
-import org.jpasecurity.jpql.parser.JpqlInnerJoin;
-import org.jpasecurity.jpql.parser.JpqlOuterJoin;
-import org.jpasecurity.jpql.parser.JpqlRead;
-import org.jpasecurity.jpql.parser.JpqlUpdate;
+import org.jpasecurity.jpql.parser.JpqlParser;
+import org.jpasecurity.jpql.parser.JpqlParser.AccessRuleContext;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
-import org.jpasecurity.jpql.parser.Node;
 
 /**
  * This class represents compiled JPA Security access rules.
@@ -51,46 +41,42 @@ import org.jpasecurity.jpql.parser.Node;
  */
 public class AccessRule extends JpqlCompiledStatement {
 
-    public static final String DEFAULT_USER_PARAMETER_NAME = "user";
-    public static final String DEFAULT_ROLE_PARAMETER_NAME = "roles";
-    public static final String DEFAULT_ROLES_PARAMETER_NAME = "roles";
-
     private Set<AccessType> access;
     private Set<Alias> aliases;
 
-    public AccessRule(JpqlAccessRule rule, TypeDefinition typeDefinition) {
-        super(rule,
-              null,
-              Collections.singletonList(typeDefinition.getAlias().toPath()),
-              Collections.singleton(typeDefinition),
-              Collections.<String>emptySet());
+    public AccessRule(JpqlParser.AccessRuleContext rule, TypeDefinition typeDefinition) {
+        super(
+                rule,
+                null,
+                Collections.singletonList(typeDefinition.getAlias().toPath()),
+                Collections.singleton(typeDefinition),
+                Collections.<String>emptySet()
+        );
     }
 
     public Path getSelectedPath() {
         return getSelectedPaths().get(0);
     }
 
-    public Class<?> getSelectedType(Metamodel metamodel) {
+    Class<?> getSelectedType(Metamodel metamodel) {
         return getSelectedTypes(metamodel).values().iterator().next();
     }
 
-    public TypeDefinition getTypeDefinition() {
+    TypeDefinition getTypeDefinition() {
         return getTypeDefinitions().iterator().next();
     }
 
-    public Collection<JpqlIdentificationVariable> getIdentificationVariableNodes(Alias alias) {
-        List<JpqlIdentificationVariable> identificationVariableNodes = new ArrayList<JpqlIdentificationVariable>();
-        visit(new IdentificationVariableVisitor(alias.getName()), identificationVariableNodes);
+    Collection<JpqlParser.IdentificationVariableContext> getIdentificationVariableNodes(Alias alias) {
+        List<JpqlParser.IdentificationVariableContext> identificationVariableNodes = new ArrayList<>();
+        visit(new IdentificationVariableVisitor(alias.getName(), identificationVariableNodes));
         return Collections.unmodifiableCollection(identificationVariableNodes);
     }
 
-    public Collection<JpqlIn> getInNodes(Alias alias) {
-        List<JpqlIn> inNodes = new ArrayList<JpqlIn>();
-        visit(new InNodeVisitor(alias.getName()), inNodes);
-        return Collections.unmodifiableCollection(inNodes);
+    Collection<JpqlParser.ExplicitTupleInListContext> getInNodes(Alias alias) {
+        return Collections.unmodifiableCollection(visit(new InNodeVisitor(alias.getName())));
     }
 
-    public boolean isAssignable(Class<?> type, Metamodel metamodel) {
+    boolean isAssignable(Class<?> type, Metamodel metamodel) {
         if (type == null) {
             return false;
         }
@@ -102,7 +88,7 @@ public class AccessRule extends JpqlCompiledStatement {
      * of this access rule and so this rule may be assignable if the type of the concrete
      * entity is of the selected type or a subclass.
      */
-    public boolean mayBeAssignable(Class<?> type, Metamodel metamodel) {
+    boolean mayBeAssignable(Class<?> type, Metamodel metamodel) {
         if (type == null) {
             return false;
         }
@@ -111,8 +97,8 @@ public class AccessRule extends JpqlCompiledStatement {
 
     public Set<Alias> getAliases() {
         if (aliases == null) {
-            Set<Alias> declaredAliases = new HashSet<Alias>();
-            visit(new AliasVisitor(), declaredAliases);
+            Set<Alias> declaredAliases = new HashSet<>();
+            visit(new AliasVisitor(declaredAliases));
             aliases = Collections.unmodifiableSet(declaredAliases);
         }
         return aliases;
@@ -138,15 +124,15 @@ public class AccessRule extends JpqlCompiledStatement {
         return getAccess().contains(type);
     }
 
+    @Override
     public AccessRule clone() {
         return (AccessRule)super.clone();
     }
 
     private Set<AccessType> getAccess() {
         if (access == null) {
-            Set<AccessType> access = new HashSet<AccessType>();
-            AccessVisitor visitor = new AccessVisitor();
-            visit(visitor, access);
+            Set<AccessType> access = new HashSet<>();
+            visit(new AccessVisitor(access));
             if (access.size() == 0) {
                 access.addAll(Arrays.asList(AccessType.values()));
             }
@@ -155,56 +141,65 @@ public class AccessRule extends JpqlCompiledStatement {
         return access;
     }
 
-    private class AccessVisitor extends JpqlVisitorAdapter<Collection<AccessType>> {
+    private static class AccessVisitor extends JpqlVisitorAdapter<Collection<AccessType>> {
 
-        public boolean visit(JpqlCreate node, Collection<AccessType> access) {
-            access.add(AccessType.CREATE);
-            return true;
+        AccessVisitor(Collection<AccessType> value) {
+            super(value);
         }
 
-        public boolean visit(JpqlRead node, Collection<AccessType> access) {
-            access.add(AccessType.READ);
-            return true;
-        }
-
-        public boolean visit(JpqlUpdate node, Collection<AccessType> access) {
-            access.add(AccessType.UPDATE);
-            return true;
-        }
-
-        public boolean visit(JpqlDelete node, Collection<AccessType> access) {
-            access.add(AccessType.DELETE);
-            return true;
-        }
-    }
-
-    private class AliasVisitor extends JpqlVisitorAdapter<Set<Alias>> {
-
-        public boolean visit(JpqlFromItem from, Set<Alias> declaredAliases) {
-            return visitAlias(from, declaredAliases);
-        }
-
-        public boolean visit(JpqlInnerJoin join, Set<Alias> declaredAliases) {
-            return visitAlias(join, declaredAliases);
-        }
-
-        public boolean visit(JpqlOuterJoin join, Set<Alias> declaredAliases) {
-            return visitAlias(join, declaredAliases);
-        }
-
-        public boolean visitAlias(Node node, Set<Alias> declaredAliases) {
-            if (node.jjtGetNumChildren() == 2) {
-                declaredAliases.add(new Alias(node.jjtGetChild(1).getValue().toLowerCase()));
+        @Override
+        public Collection<AccessType> visitAccessRule(AccessRuleContext ctx) {
+            if (ctx.CREATE() != null) {
+                defaultResult().add(AccessType.CREATE);
             }
-            return false;
+
+            if (ctx.READ() != null) {
+                defaultResult().add(AccessType.CREATE);
+            }
+
+            if (ctx.UPDATE() != null) {
+                defaultResult().add(AccessType.READ);
+            }
+
+            if (ctx.DELETE() != null) {
+                defaultResult().add(AccessType.UPDATE);
+            }
+
+            return keepVisitingChildren();
         }
     }
 
-    private class IdentificationVariableVisitor extends JpqlVisitorAdapter<List<JpqlIdentificationVariable>> {
+    private static class AliasVisitor extends JpqlVisitorAdapter<Set<Alias>> {
 
-        private String identifier;
+        AliasVisitor(Set<Alias> declaredAliases) {
+            super(declaredAliases);
+        }
 
-        IdentificationVariableVisitor(String identifier) {
+        @Override
+        public Set<Alias> visitFromElementSpace(JpqlParser.FromElementSpaceContext ctx) {
+            if (ctx.getChildCount() == 2) {
+                defaultResult().add(new Alias(ctx.getChild(1).getText().toLowerCase()));
+            }
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public Set<Alias> visitSimplePath(JpqlParser.SimplePathContext ctx) {
+            if (ctx.getChildCount() == 2) {
+                defaultResult().add(new Alias(ctx.getChild(1).getText().toLowerCase()));
+            }
+            return stopVisitingChildren();
+        }
+    }
+
+    private static class IdentificationVariableVisitor
+            extends JpqlVisitorAdapter<List<JpqlParser.IdentificationVariableContext>> {
+
+        private final String identifier;
+
+        IdentificationVariableVisitor(String identifier,
+                                      List<JpqlParser.IdentificationVariableContext> identificationVariableNodes) {
+            super(identificationVariableNodes);
             if (identifier == null) {
                 throw new IllegalArgumentException("identifier may not be null");
             }
@@ -212,31 +207,34 @@ public class AccessRule extends JpqlCompiledStatement {
         }
 
         @Override
-        public boolean visit(JpqlIdentificationVariable node,
-                             List<JpqlIdentificationVariable> identificationVariables) {
-            if (identifier.equals(node.getValue().toLowerCase())) {
-                identificationVariables.add(node);
+        public List<JpqlParser.IdentificationVariableContext> visitIdentificationVariable(
+                JpqlParser.IdentificationVariableContext ctx) {
+            if (identifier.equals(ctx.getText().toLowerCase())) {
+                defaultResult().add(ctx);
             }
-            return true;
+            return keepVisitingChildren();
         }
     }
 
-    private class InNodeVisitor extends JpqlVisitorAdapter<List<JpqlIn>> {
+    private static class InNodeVisitor extends JpqlVisitorAdapter<Collection<JpqlParser.ExplicitTupleInListContext>> {
 
-        private String identifier;
+        private final String identifier;
 
         InNodeVisitor(String identifier) {
+            super(new ArrayList<JpqlParser.ExplicitTupleInListContext>());
             if (identifier == null) {
                 throw new IllegalArgumentException("identifier may not be null");
             }
             this.identifier = identifier.toLowerCase();
         }
 
-        public boolean visit(JpqlIn node, List<JpqlIn> inRoles) {
-            if (identifier.equals(node.jjtGetChild(1).toString().toLowerCase())) {
-                inRoles.add(node);
+        @Override
+        public Collection<JpqlParser.ExplicitTupleInListContext> visitExplicitTupleInList(
+                JpqlParser.ExplicitTupleInListContext ctx) {
+            if (identifier.equals(((BaseContext)ctx.getChild(1)).toJpqlString().toLowerCase())) {
+                defaultResult().add(ctx);
             }
-            return true;
+            return keepVisitingChildren();
         }
     }
 }

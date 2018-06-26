@@ -22,6 +22,9 @@ import org.jpasecurity.AccessType;
  */
 public class UpdatingTag extends AbstractEntityTag {
 
+    private static final long serialVersionUID = -8813247706999489403L;
+
+    @Override
     protected AccessType getAccessType() {
         return AccessType.UPDATE;
     }

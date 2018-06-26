@@ -26,65 +26,53 @@ import org.slf4j.LoggerFactory;
 /** @author Arne Limburg */
 public class ToJpqlStringVisitorTest {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ToStringVisitor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ToJpqlStringVisitorTest.class);
 
-    private JpqlParser parser;
     private ToJpqlStringVisitor toJpqlStringVisitor;
 
     @Test
-    public void toStringVisitor() throws ParseException {
-        assertJpql("SELECT bean FROM TestBean bean "
-            + "WHERE NOT EXISTS ( SELECT bean FROM TestBean bean WHERE bean.id = :id)",
-            "SELECT bean FROM TestBean bean "
-                + "WHERE NOT EXISTS ( SELECT bean FROM TestBean bean WHERE bean.id = :id)");
-        assertJpql("SELECT bean FROM TestBean bean "
-            + "WHERE NOT EXISTS ( SELECT bean FROM TestBean bean WHERE bean.id = :id)",
-            "SELECT bean FROM TestBean bean "
-                + "WHERE NOT EXISTS ( SELECT /* QUERY_OPTIMIZE_NOCACHE */ "
-                + "bean FROM TestBean bean WHERE bean.id = :id)");
-        assertJpql("SELECT bean FROM TestBean bean "
-            + "WHERE NOT EXISTS ( SELECT bean FROM TestBean bean WHERE bean.id = :id)",
-            "SELECT bean FROM TestBean bean "
-                + "WHERE NOT EXISTS ( SELECT /* IS_ACCESSIBLE_NODB */ bean FROM TestBean bean WHERE bean.id = :id)");
-        assertJpql("SELECT bean FROM TestBean bean "
-            + "WHERE NOT EXISTS ( SELECT bean FROM TestBean bean WHERE bean.id = :id)",
-            "SELECT bean FROM TestBean bean "
-                + "WHERE NOT EXISTS ( SELECT /* QUERY_OPTIMIZE_NOCACHE IS_ACCESSIBLE_NODB */ "
-                + "bean FROM TestBean bean WHERE bean.id = :id)");
-        assertJpql("SELECT bean FROM TestBean bean "
-            + "WHERE NOT EXISTS ( SELECT bean FROM TestBean bean WHERE bean.id = :id)",
-            "SELECT bean FROM TestBean bean "
-                + "WHERE NOT EXISTS ( SELECT /* QUERY_OPTIMIZE_NOCACHE IS_ACCESSIBLE_NODB"
-                + " IS_ACCESSIBLE_NOCACHE*/ bean FROM TestBean bean WHERE bean.id = :id)");
+    public void toStringVisitor() {
+        assertJpql("SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                        + " (SELECT bean FROM TestBean bean WHERE bean.id = :id)",
+            "SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                    + " (SELECT bean FROM TestBean bean WHERE bean.id = :id)");
+        assertJpql("SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                        + " (SELECT bean FROM TestBean bean WHERE bean.id = :id)",
+            "SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                    + " (SELECT /* QUERY_OPTIMIZE_NOCACHE */ bean FROM TestBean bean WHERE bean.id = :id)");
+        assertJpql("SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                        + " (SELECT bean FROM TestBean bean WHERE bean.id = :id)",
+            "SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                    + " (SELECT /* IS_ACCESSIBLE_NODB */ bean FROM TestBean bean WHERE bean.id = :id)");
+        assertJpql("SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                        + " (SELECT bean FROM TestBean bean WHERE bean.id = :id)",
+            "SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                    + " (SELECT /* QUERY_OPTIMIZE_NOCACHE IS_ACCESSIBLE_NODB */ bean"
+                    + " FROM TestBean bean WHERE bean.id = :id)");
+        assertJpql("SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                        + " (SELECT bean FROM TestBean bean WHERE bean.id = :id)",
+            "SELECT bean FROM TestBean bean WHERE NOT EXISTS"
+                    + " (SELECT /* QUERY_OPTIMIZE_NOCACHE IS_ACCESSIBLE_NODB IS_ACCESSIBLE_NOCACHE*/ bean"
+                    + " FROM TestBean bean WHERE bean.id = :id)");
     }
 
-    public void assertJpql(String expected, String source) throws ParseException {
-        StringBuilder queryBuilder = new StringBuilder();
-        JpqlStatement statement = null;
+    public void assertJpql(String expected, String source) {
+        JpqlParser.StatementContext statement;
         try {
-            statement = parser.parseQuery(source);
-        } catch (ParseException e) {
+            statement = JpqlParsingHelper.parseQuery(source);
+        } catch (Exception e) {
             fail("failed to parse jpql:\n\n" + source + "\n\n" + e.getMessage());
+            return;
         }
-        statement.visit(toJpqlStringVisitor, queryBuilder);
-        source = stripWhiteSpaces(source);
-        String result = stripWhiteSpaces(queryBuilder.toString());
-        LOG.debug(source);
-        LOG.debug(result);
-        assertEquals("JPQL", expected, result);
-    }
-
-    protected String stripWhiteSpaces(String query) {
-        return query.replaceAll("\\s+", " ").trim();
-    }
-
-    @Before
-    public void initializeParser() {
-        parser = new JpqlParser();
+        String actual = toJpqlStringVisitor.visit(statement).toString();
+        LOG.debug("Expected: {}", expected);
+        LOG.debug("Actual  : {}", actual);
+        assertEquals("JPQL", expected, actual);
+        toJpqlStringVisitor.defaultResult().delete(0, toJpqlStringVisitor.defaultResult().length());
     }
 
     @Before
     public void initializeVisitor() {
-        toJpqlStringVisitor = new ToJpqlStringVisitor();
+        toJpqlStringVisitor = new ToJpqlStringVisitor(new StringBuilder());
     }
 }

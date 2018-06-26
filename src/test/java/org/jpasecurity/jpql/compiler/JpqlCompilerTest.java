@@ -16,10 +16,12 @@
 package org.jpasecurity.jpql.compiler;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 
 import javax.persistence.PersistenceException;
@@ -31,13 +33,15 @@ import javax.persistence.metamodel.PluralAttribute;
 import javax.persistence.metamodel.SingularAttribute;
 
 import org.jpasecurity.jpql.JpqlCompiledStatement;
-import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.ParseException;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.model.MethodAccessTestBean;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 /**
  * @author Arne Limburg
@@ -45,16 +49,18 @@ import org.junit.rules.ExpectedException;
 public class JpqlCompilerTest {
 
     @Rule
-    public ExpectedException expectedException = ExpectedException.none();
+    public final ExpectedException expectedException = ExpectedException.none();
 
+    @Rule
+    public final MockitoRule mockitoRule = MockitoJUnit.rule();
+
+    @Mock
     private Metamodel metamodel;
-    private JpqlParser parser;
+
     private JpqlCompiler compiler;
 
     @Before
     public void initialize() throws NoSuchMethodException {
-        metamodel = mock(Metamodel.class);
-
         EntityType methodAccessTestBeanType = mock(EntityType.class);
         BasicType intType = mock(BasicType.class);
         BasicType stringType = mock(BasicType.class);
@@ -64,14 +70,14 @@ public class JpqlCompilerTest {
         PluralAttribute childrenAttribute = mock(PluralAttribute.class);
         PluralAttribute relatedAttribute = mock(PluralAttribute.class);
         when(metamodel.getManagedTypes())
-            .thenReturn(new HashSet<ManagedType<?>>(Arrays.<ManagedType<?>>asList(methodAccessTestBeanType)));
+            .thenReturn(new HashSet<>(Collections.<ManagedType<?>>singletonList(methodAccessTestBeanType)));
         when(metamodel.getEntities())
-            .thenReturn(new HashSet<EntityType<?>>(Arrays.<EntityType<?>>asList(methodAccessTestBeanType)));
-        when(metamodel.entity(MethodAccessTestBean.class)).thenReturn(methodAccessTestBeanType);
-        when(metamodel.managedType(MethodAccessTestBean.class)).thenReturn(methodAccessTestBeanType);
+            .thenReturn(new HashSet<>(Collections.<EntityType<?>>singletonList(methodAccessTestBeanType)));
+        doReturn(methodAccessTestBeanType).when(metamodel).entity(MethodAccessTestBean.class);
+        doReturn(methodAccessTestBeanType).when(metamodel).managedType(MethodAccessTestBean.class);
         when(methodAccessTestBeanType.getName()).thenReturn(MethodAccessTestBean.class.getSimpleName());
-        when(methodAccessTestBeanType.getJavaType()).thenReturn((Class)MethodAccessTestBean.class);
-        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet(Arrays.asList(
+        when(methodAccessTestBeanType.getJavaType()).thenReturn(MethodAccessTestBean.class);
+        when(methodAccessTestBeanType.getAttributes()).thenReturn(new HashSet<>(Arrays.asList(
                 idAttribute, nameAttribute, parentAttribute, childrenAttribute, relatedAttribute)));
         when(methodAccessTestBeanType.getAttribute("id")).thenReturn(idAttribute);
         when(methodAccessTestBeanType.getAttribute("name")).thenReturn(nameAttribute);
@@ -85,8 +91,7 @@ public class JpqlCompilerTest {
         when(nameAttribute.getName()).thenReturn("name");
         when(nameAttribute.isCollection()).thenReturn(false);
         when(nameAttribute.getType()).thenReturn(stringType);
-        when(nameAttribute.getJavaMember())
-            .thenReturn(MethodAccessTestBean.class.getDeclaredMethod("getName"));
+        when(nameAttribute.getJavaMember()).thenReturn(MethodAccessTestBean.class.getDeclaredMethod("getName"));
         when(parentAttribute.getName()).thenReturn("parent");
         when(parentAttribute.isCollection()).thenReturn(false);
         when(parentAttribute.getType()).thenReturn(methodAccessTestBeanType);
@@ -103,51 +108,48 @@ public class JpqlCompilerTest {
         when(relatedAttribute.getJavaMember())
             .thenReturn(MethodAccessTestBean.class.getDeclaredMethod("getRelated"));
 
-        parser = new JpqlParser();
         compiler = new JpqlCompiler(metamodel);
     }
 
     @Test
-    public void selectedPathsForCount() throws ParseException {
+    public void selectedPathsForCount() {
         String statement = "SELECT COUNT(net) FROM org.jpasecurity.model.MethodAccessTestBean net";
-        JpqlCompiledStatement compiledStatement = compiler.compile(parser.parseQuery(statement));
+        JpqlCompiledStatement compiledStatement = compiler.compile(JpqlParsingHelper.parseQuery(statement));
         assertEquals(1, compiledStatement.getSelectedPaths().size());
         assertEquals("net", compiledStatement.getSelectedPaths().get(0).toString());
     }
 
     @Test
-    public void selectedPathsForDistinct() throws ParseException {
+    public void selectedPathsForDistinct() {
         String statement = "SELECT DISTINCT tb1, tb2 FROM MethodAccessTestBean tb1, MethodAccessTestBean tb2";
-        JpqlCompiledStatement compiledStatement = compiler.compile(parser.parseQuery(statement));
+        JpqlCompiledStatement compiledStatement = compiler.compile(JpqlParsingHelper.parseQuery(statement));
         assertEquals(2, compiledStatement.getSelectedPaths().size());
         assertEquals("tb1", compiledStatement.getSelectedPaths().get(0).toString());
         assertEquals("tb2", compiledStatement.getSelectedPaths().get(1).toString());
     }
 
     @Test
-    public void selectedPathsForExists() throws ParseException {
+    public void selectedPathsForExists() {
         String statement = "SELECT tb FROM MethodAccessTestBean tb "
                          + "WHERE EXISTS(SELECT tb2 FROM MethodAccessTestBean tb2)";
-        JpqlCompiledStatement compiledStatement = compiler.compile(parser.parseQuery(statement));
+        JpqlCompiledStatement compiledStatement = compiler.compile(JpqlParsingHelper.parseQuery(statement));
         assertEquals(1, compiledStatement.getSelectedPaths().size());
         assertEquals("tb", compiledStatement.getSelectedPaths().get(0).toString());
     }
 
     @Test
-    public void updateStatementAlias() throws ParseException {
-        String statement = "Update MethodAccessTestBean tb "
-            + "set tb.beanName='horst' where tb.identifier=34";
-        JpqlCompiledStatement compiledStatement = compiler.compile(parser.parseQuery(statement));
+    public void updateStatementAlias() {
+        String statement = "Update MethodAccessTestBean tb set tb.beanName='horst' where tb.identifier=34";
+        JpqlCompiledStatement compiledStatement = compiler.compile(JpqlParsingHelper.parseQuery(statement));
         assertEquals(1, compiledStatement.getTypeDefinitions().size());
         assertEquals("tb", compiledStatement.getTypeDefinitions().iterator().next().getAlias().getName());
     }
 
     @Test
-    public void updateStatementMissingAlias() throws ParseException {
+    public void updateStatementMissingAlias() {
         expectedException.expect(PersistenceException.class);
-        expectedException.expectMessage("Missing alias for type MethodAccessTestBean ");
-        String statement = "Update MethodAccessTestBean "
-            + "set beanName='horst' where identifier=34";
-        compiler.compile(parser.parseQuery(statement));
+        expectedException.expectMessage("Missing alias for type MethodAccessTestBean");
+        String statement = "Update MethodAccessTestBean set beanName='horst' where identifier=34";
+        compiler.compile(JpqlParsingHelper.parseQuery(statement));
     }
 }

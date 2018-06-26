@@ -20,7 +20,6 @@ import javax.faces.context.FacesContext;
 
 import org.jpasecurity.AccessManager;
 import org.jpasecurity.AccessType;
-import org.jpasecurity.Alias;
 import org.jpasecurity.SecurityContext;
 import org.jpasecurity.jsf.authentication.JsfSecurityContext;
 
@@ -28,8 +27,6 @@ import org.jpasecurity.jsf.authentication.JsfSecurityContext;
  * @author Arne Limburg
  */
 public final class JsfAccessContext {
-
-    private static final Alias CURRENT_ROLES = new Alias("CURRENT_ROLES");
 
     public static SecureBeanDefinition newBean(String name) {
         return new SecureBeanDefinition(name);
@@ -125,13 +122,13 @@ public final class JsfAccessContext {
     }
 
     public static boolean isUserInRole(String roleName) {
-        return JsfAccessContext.getSecurityContext().getAliasValues(CURRENT_ROLES).contains(roleName);
+        return JsfAccessContext.getSecurityContext().getAliasValues(SecurityContext.CURRENT_ROLES).contains(roleName);
     }
 
     protected static AccessManager getAccessManager() {
         ELContext elContext = FacesContext.getCurrentInstance().getELContext();
         Object accessManager = elContext.getELResolver().getValue(elContext, null, "accessManager");
-        if (accessManager == null || !(accessManager instanceof AccessManager)) {
+        if (!(accessManager instanceof AccessManager)) {
             String message = "No access manager found. Please add an object of type " + AccessManager.class.getName()
                            + " with the el-name 'accessManager' to your faces context. "
                            + "If you are using jpasecurity-jpa you can get one from "
@@ -144,28 +141,9 @@ public final class JsfAccessContext {
     protected static SecurityContext getSecurityContext() {
         ELContext elContext = FacesContext.getCurrentInstance().getELContext();
         Object securityContext = elContext.getELResolver().getValue(elContext, null, "securityContext");
-        if (securityContext == null || !(securityContext instanceof SecurityContext)) {
+        if (!(securityContext instanceof SecurityContext)) {
             securityContext = new JsfSecurityContext();
         }
         return (SecurityContext)securityContext;
-    }
-
-    public static class SecureBeanDefinition {
-
-        private String name;
-        private Object[] parameters;
-
-        public SecureBeanDefinition(String name, Object... parameters) {
-            this.name = name;
-            this.parameters = parameters;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public Object[] getParameters() {
-            return parameters;
-        }
     }
 }

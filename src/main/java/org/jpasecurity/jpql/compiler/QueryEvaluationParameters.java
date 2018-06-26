@@ -70,12 +70,14 @@ public class QueryEvaluationParameters {
     }
 
     public QueryEvaluationParameters(QueryEvaluationParameters parameters) {
-        this(parameters.metamodel,
-             parameters.persistenceUnitUtil,
-             parameters.aliases,
-             parameters.namedParameters,
-             parameters.positionalParameters,
-             parameters.getEvaluationType());
+        this(
+            parameters.metamodel,
+            parameters.persistenceUnitUtil,
+            parameters.aliases,
+            parameters.namedParameters,
+            parameters.positionalParameters,
+            parameters.getEvaluationType()
+        );
     }
 
     public Metamodel getMetamodel() {

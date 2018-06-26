@@ -18,6 +18,7 @@ package org.jpasecurity.xml;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Objects;
 
 import javax.persistence.PersistenceException;
 import javax.xml.parsers.ParserConfigurationException;
@@ -35,9 +36,10 @@ import org.xml.sax.helpers.DefaultHandler;
 public abstract class AbstractXmlParser<H extends DefaultHandler> {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractXmlParser.class);
-    private H handler;
 
-    public AbstractXmlParser(H xmlHandler) {
+    private final H handler;
+
+    protected AbstractXmlParser(H xmlHandler) {
         handler = xmlHandler;
     }
 
@@ -46,12 +48,9 @@ public abstract class AbstractXmlParser<H extends DefaultHandler> {
     }
 
     public void parse(URL url) throws IOException {
-        LOG.info("parsing " + url);
-        InputStream stream = url.openStream();
-        try {
+        LOG.info("parsing {}", Objects.requireNonNull(url, "URL to be parsed cannot be null"));
+        try (InputStream stream = url.openStream()) {
             parse(stream);
-        } finally {
-            stream.close();
         }
     }
 
@@ -61,11 +60,7 @@ public abstract class AbstractXmlParser<H extends DefaultHandler> {
             factory.setValidating(true);
             SAXParser parser = factory.newSAXParser();
             parser.parse(xml, handler);
-        } catch (ParserConfigurationException e) {
-            throw new PersistenceException(e);
-        } catch (SAXException e) {
-            throw new PersistenceException(e);
-        } catch (IOException e) {
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new PersistenceException(e);
         }
     }

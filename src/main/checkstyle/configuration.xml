@@ -59,13 +59,12 @@
 
         <module name="FinalClass"/>
 
-
         <!--module name="HideUtilityClassConstructor"/-->
 
         <module name="IllegalImport"/> <!-- defaults to sun.* packages -->
         <module name="IllegalInstantiation"/>
         <module name="ImportOrder">
-            <property name="groups" value="java,javax,junit,org,com" />
+            <property name="groups" value="java,javax,junit,lombok,org,com" />
 <!--             <property name="separated" value="true" /> -->
       	    <property name="option" value="top" />
         </module>

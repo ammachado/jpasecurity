@@ -25,8 +25,9 @@ import java.util.List;
  */
 public class SimpleSet<E> extends AbstractSet<E> {
 
-    private List<E> values = new ArrayList<E>();
+    private List<E> values = new ArrayList<>();
 
+    @Override
     public boolean add(E entry) {
         if (values.contains(entry)) {
             return false;

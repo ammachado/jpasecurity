@@ -15,18 +15,112 @@
  */
 package org.jpasecurity.jpql.parser;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 public class JpqlKeywords {
 
-    public static final Set<String> ALL;
-    static {
-        Set<String> keywords = new HashSet<String>();
-        for (String keyword: JpqlParserConstants.tokenImage) {
-            keywords.add(keyword.substring(1, keyword.length() - 1).toUpperCase());
-        }
-        ALL = Collections.unmodifiableSet(keywords);
-    }
+    public static final Set<String> ALL = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            // JPA 2.2 Reserved Keywords  (4.4.1)
+            "ABS",
+            "ALL",
+            "AND",
+            "ANY",
+            "AS",
+            "ASC",
+            "AVG",
+            "BETWEEN",
+            "BIT_LENGTH",
+            "BOTH",
+            "BY",
+            "CASE",
+            "CAST",
+            "CHAR_LENGTH",
+            "CHARACTER_LENGTH",
+            "CLASS",
+            "COALESCE",
+            "CONCAT",
+            "COUNT",
+            "CURRENT_DATE",
+            "CURRENT_TIME",
+            "CURRENT_TIMESTAMP",
+            "DELETE",
+            "DESC",
+            "DISTINCT",
+            "ELSE",
+            "EMPTY",
+            "END",
+            "ENTRY",
+            "ESCAPE",
+            "EXISTS",
+            "FALSE",
+            "FETCH",
+            "FROM",
+            "FUNCTION",
+            "GROUP",
+            "HAVING",
+            "IN",
+            "INDEX",
+            "INNER",
+            "IS",
+            "JOIN",
+            "KEY",
+            "LEADING",
+            "LEFT",
+            "LENGTH",
+            "LIKE",
+            "LOCATE",
+            "LOWER",
+            "MAX",
+            "MEMBER",
+            "MIN",
+            "MOD",
+            "NEW",
+            "NOT",
+            "NULLIF",
+            "OBJECT",
+            "OF",
+            "ON",
+            "OR",
+            "ORDER",
+            "OUTER",
+            "POSITION",
+            "SELECT",
+            "SET",
+            "SIZE",
+            "SOME",
+            "SQRT",
+            "SUBSTRING",
+            "SUM",
+            "THEN",
+            "TRAILING",
+            "TREAT",
+            "TRUE",
+            "TYPE",
+            "UNKNOWN",
+            "UPDATE",
+            "UPPER",
+            "VALUE",
+            "WHEN",
+            "WHERE",
+
+            // Hibernate specific keywords
+            "COLLATE",
+            "CROSS",
+            "DAY",
+            "ELEMENTS",
+            "FULL",
+            "HOUR",
+            "INSERT",
+            "LIST",
+            "MAP",
+            "MINUTE",
+            "MONTH",
+            "RIGHT",
+            "SECOND",
+            "WITH",
+            "YEAR"
+    )));
 }

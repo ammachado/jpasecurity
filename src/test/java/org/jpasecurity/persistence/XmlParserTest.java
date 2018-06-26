@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
-
 public class XmlParserTest {
 
     private XmlParser parser;
@@ -82,7 +81,7 @@ public class XmlParserTest {
         Iterator<Node> i = nodes.iterator();
         Node node1 = i.next();
         Node node2 = i.next();
-        Map<String, String> namedQueries = new HashMap<String, String>();
+        Map<String, String> namedQueries = new HashMap<>();
         namedQueries.put(node1.getParentNode().getAttributes().getNamedItem("name").getTextContent(),
                 node1.getTextContent());
         namedQueries.put(node2.getParentNode().getAttributes().getNamedItem("name").getTextContent(),
@@ -98,7 +97,7 @@ public class XmlParserTest {
         Iterator<Node> i = nodes.iterator();
         Node node1 = i.next();
         Node node2 = i.next();
-        Map<String, String> namedQueries = new HashMap<String, String>();
+        Map<String, String> namedQueries = new HashMap<>();
         namedQueries.put(node1.getParentNode().getAttributes().getNamedItem("name").getTextContent(),
                 node1.getTextContent());
         namedQueries.put(node2.getParentNode().getAttributes().getNamedItem("name").getTextContent(),

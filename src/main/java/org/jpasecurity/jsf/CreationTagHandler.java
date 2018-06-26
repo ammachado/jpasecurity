@@ -18,7 +18,6 @@ package org.jpasecurity.jsf;
 import javax.faces.view.facelets.TagConfig;
 
 import org.jpasecurity.AccessType;
-import org.jpasecurity.jsf.JsfAccessContext.SecureBeanDefinition;
 
 /**
  * @author Arne Limburg
@@ -35,6 +34,7 @@ public class CreationTagHandler extends AbstractBeanTagHandler {
         return JsfAccessContext.getAccessManager().isAccessible(getAccessType(), bean.getName(), bean.getParameters());
     }
 
+    @Override
     protected AccessType getAccessType() {
         return AccessType.CREATE;
     }

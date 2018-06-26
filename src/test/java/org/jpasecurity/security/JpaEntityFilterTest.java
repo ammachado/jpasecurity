@@ -18,10 +18,10 @@ package org.jpasecurity.security;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -31,18 +31,23 @@ import javax.persistence.metamodel.Metamodel;
 import javax.persistence.metamodel.SingularAttribute;
 
 import org.jpasecurity.AccessType;
-import org.jpasecurity.Alias;
+import org.jpasecurity.SecurityContext;
 import org.jpasecurity.access.DefaultAccessManager;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.contacts.model.Contact;
 import org.jpasecurity.contacts.model.User;
-import org.jpasecurity.jpql.parser.JpqlAccessRule;
 import org.jpasecurity.jpql.parser.JpqlParser;
+import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.security.rules.AccessRulesCompiler;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 import org.mockito.stubbing.Answer;
 
 /**
@@ -50,23 +55,28 @@ import org.mockito.stubbing.Answer;
  */
 public class JpaEntityFilterTest {
 
+    @Rule
+    public final MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
+
+    @Mock
     private Metamodel metamodel;
+
+    @Mock
     private DefaultAccessManager accessManager;
+
     private Collection<AccessRule> accessRules;
 
     @Before
     public void initialize() throws Exception {
-        metamodel = mock(Metamodel.class);
         EntityType contactType = mock(EntityType.class);
         SingularAttribute ownerAttribute = mock(SingularAttribute.class);
-        accessManager = mock(DefaultAccessManager.class);
         when(accessManager.getContext()).thenReturn(new DefaultSecurityContext());
         when(contactType.getName()).thenReturn(Contact.class.getSimpleName());
-        when(contactType.getJavaType()).thenReturn((Class)Contact.class);
+        when(contactType.getJavaType()).thenReturn(Contact.class);
         when(metamodel.getEntities())
-            .thenReturn(new HashSet<EntityType<?>>(Arrays.<EntityType<?>>asList(contactType)));
-        when(metamodel.entity(Contact.class)).thenReturn(contactType);
-        when(metamodel.managedType(Contact.class)).thenReturn(contactType);
+            .thenReturn(new HashSet<>(Collections.<EntityType<?>>singletonList(contactType)));
+        doReturn(contactType).when(metamodel).entity(Contact.class);
+        doReturn(contactType).when(metamodel).managedType(Contact.class);
         when(contactType.getAttributes()).thenReturn(Collections.singleton(ownerAttribute));
         when(contactType.getAttribute("owner")).thenReturn(ownerAttribute);
         when(ownerAttribute.getName()).thenReturn("owner");
@@ -74,9 +84,9 @@ public class JpaEntityFilterTest {
 
         DefaultAccessManager.Instance.register(accessManager);
 
-        JpqlParser parser = new JpqlParser();
-        JpqlAccessRule rule
-            = parser.parseRule("GRANT READ ACCESS TO Contact contact WHERE contact.owner = CURRENT_PRINCIPAL");
+        JpqlParser.AccessRuleContext rule = JpqlParsingHelper.parseAccessRule(
+                "GRANT READ ACCESS TO Contact contact WHERE contact.owner = CURRENT_PRINCIPAL"
+        );
         AccessRulesCompiler compiler = new AccessRulesCompiler(metamodel);
         accessRules = compiler.compile(rule);
     }
@@ -87,14 +97,14 @@ public class JpaEntityFilterTest {
     }
 
     @Test
-    public void access() throws Exception {
+    public void access() {
         DefaultSecurityContext securityContext
             = (DefaultSecurityContext)DefaultAccessManager.Instance.get().getContext();
         SecurePersistenceUnitUtil persistenceUnitUtil = mock(SecurePersistenceUnitUtil.class);
         when(persistenceUnitUtil.isLoaded(any())).thenReturn(true);
         when(persistenceUnitUtil.initialize(any())).thenAnswer(new Answer<Object>() {
             @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+            public Object answer(InvocationOnMock invocation) {
                 return invocation.getArgument(0);
             }
         });
@@ -103,9 +113,9 @@ public class JpaEntityFilterTest {
         User john = new User("John");
         Contact contact = new Contact(john, "123456789");
 
-        securityContext.register(new Alias("CURRENT_PRINCIPAL"), john);
+        securityContext.register(SecurityContext.CURRENT_PRINCIPAL, john);
         assertTrue(filter.isAccessible(AccessType.READ, contact));
-        securityContext.register(new Alias("CURRENT_PRINCIPAL"), new User("Mary"));
+        securityContext.register(SecurityContext.CURRENT_PRINCIPAL, new User("Mary"));
         assertFalse(filter.isAccessible(AccessType.READ, contact));
     }
 }

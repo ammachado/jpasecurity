@@ -43,22 +43,25 @@ public class WebXmlRolesParser extends AbstractXmlParser<XmlRolesHandler> {
         private static final String ROLE_NAME_TAG = "role-name";
 
         private StringBuilder currentText = new StringBuilder();
-        private Set<String> roles = new HashSet<String>();
+        private Set<String> roles = new HashSet<>();
 
         public Set<String> getRoles() {
             return roles;
         }
 
+        @Override
         public void startElement(String uri, String tag, String qualified, Attributes attributes) throws SAXException {
             if (ROLE_NAME_TAG.equals(qualified)) {
                 currentText.setLength(0);
             }
         }
 
+        @Override
         public void characters(char[] chars, int start, int length) throws SAXException {
             currentText.append(chars, start, length);
         }
 
+        @Override
         public void endElement(String uri, String localName, String qualifiedName) throws SAXException {
             String text = currentText.toString().trim();
             currentText.setLength(0);

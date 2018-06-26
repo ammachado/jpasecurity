@@ -22,6 +22,8 @@ import org.jpasecurity.AccessType;
  */
 public class CreationTag extends AbstractSecurityTag {
 
+    private static final long serialVersionUID = 7224749372877458452L;
+
     private String type;
     private String parameters;
 
@@ -33,7 +35,7 @@ public class CreationTag extends AbstractSecurityTag {
         this.type = type;
     }
 
-    public Object[] resolveParameters() {
+    private Object[] resolveParameters() {
         String[] parameterNames = parameters.split(",");
         Object[] resolvedParameters = new Object[parameterNames.length];
         for (int i = 0; i < resolvedParameters.length; i++) {
@@ -59,6 +61,7 @@ public class CreationTag extends AbstractSecurityTag {
         this.parameters = parameters;
     }
 
+    @Override
     protected boolean isAccessible() {
         return getAccessManager().isAccessible(AccessType.CREATE, getType(), resolveParameters());
     }

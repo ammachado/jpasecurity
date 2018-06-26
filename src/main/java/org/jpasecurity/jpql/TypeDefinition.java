@@ -33,11 +33,12 @@ import org.jpasecurity.Path;
 /**
  * This class holds type-definitions of JPQL statements.
  * Types may be defined either in the from-clause or in join-clauses.
+ *
  * @author Arne Limburg
  */
 public class TypeDefinition {
 
-    private Alias alias;
+    private final Alias alias;
     private Class<?> keyType;
     private Class<?> type;
     private Path joinPath;
@@ -49,16 +50,16 @@ public class TypeDefinition {
         this.type = type;
     }
 
-    public TypeDefinition(Class<?> keyType, Class<?> type, Path joinPath, boolean innerJoin, boolean fetchJoin) {
-        this(null, keyType, type, joinPath, innerJoin, fetchJoin);
+    public TypeDefinition(Alias alias, Class<?> type, Path joinPath, boolean innerJoin) {
+        this(alias, null, type, joinPath, innerJoin);
     }
 
     public TypeDefinition(Class<?> type, Path joinPath, boolean innerJoin, boolean fetchJoin) {
         this(null, null, type, joinPath, innerJoin, fetchJoin);
     }
 
-    public TypeDefinition(Alias alias, Class<?> type, Path joinPath, boolean innerJoin) {
-        this(alias, null, type, joinPath, innerJoin);
+    public TypeDefinition(Class<?> keyType, Class<?> type, Path joinPath, boolean innerJoin, boolean fetchJoin) {
+        this(null, keyType, type, joinPath, innerJoin, fetchJoin);
     }
 
     public TypeDefinition(Alias alias, Class<?> keyType, Class<?> type, Path joinPath, boolean innerJoin) {
@@ -131,6 +132,7 @@ public class TypeDefinition {
         this.type = type;
     }
 
+    @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder();
         if (isInnerJoin()) {
@@ -174,12 +176,12 @@ public class TypeDefinition {
         }
 
         public T filter(Collection<TypeDefinition> typeDefinitions) {
-            for (TypeDefinition typeDefinition: typeDefinitions) {
+            for (TypeDefinition typeDefinition : typeDefinitions) {
                 if (filter(typeDefinition)) {
                     return transform(typeDefinition);
                 }
             }
-            throw new PersistenceException("No type found for alias " + getFilterAlias());
+            throw new TypeNotPresentException("No type found for alias \"" + getFilterAlias() + "\"", null);
         }
 
         protected abstract boolean filter(TypeDefinition typeDefinition);
@@ -191,12 +193,13 @@ public class TypeDefinition {
 
     public static class AliasTypeFilter extends Filter<AliasTypeFilter, TypeDefinition> {
 
-        private Alias alias;
+        private final Alias alias;
 
-        public AliasTypeFilter(Alias alias) {
+        AliasTypeFilter(Alias alias) {
             this.alias = alias;
         }
 
+        @Override
         protected boolean filter(TypeDefinition typeDefinition) {
             return alias.equals(typeDefinition.getAlias());
         }
@@ -217,7 +220,7 @@ public class TypeDefinition {
         private Class<?> rootType;
         private String[] pathElements;
 
-        public AttributeFilter(Path path) {
+        AttributeFilter(Path path) {
             pathElements = path.getPathComponents();
         }
 
@@ -266,10 +269,10 @@ public class TypeDefinition {
 
     public static class ManagedTypeFilter extends Filter<ManagedTypeFilter, ManagedType<?>> {
 
-        private Path path;
-        private Filter<?, ?> filter;
+        private final Path path;
+        private final Filter<?, ?> filter;
 
-        public ManagedTypeFilter(Path path) {
+        ManagedTypeFilter(Path path) {
             this.path = path;
             if (path.hasSubpath()) {
                 filter = new AttributeFilter(path);
@@ -278,6 +281,7 @@ public class TypeDefinition {
             }
         }
 
+        @Override
         public ManagedTypeFilter withMetamodel(Metamodel model) {
             filter.withMetamodel(model);
             return super.withMetamodel(model);

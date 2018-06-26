@@ -26,7 +26,7 @@ import org.jpasecurity.model.TestBean;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -36,8 +36,8 @@ public class LazyRelationshipTest {
 
     public static final String USER = "user";
 
-    @Rule
-    public TestEntityManager entityManager = new TestEntityManager("lazy-relationship");
+    @ClassRule
+    public static final TestEntityManager ENTITY_MANAGER = new TestEntityManager("lazy-relationship");
 
     private int childId;
     private int parentId;
@@ -45,14 +45,14 @@ public class LazyRelationshipTest {
     @Before
     public void createTestData() {
         TestSecurityContext.authenticate(USER);
-        entityManager.getTransaction().begin();
+        ENTITY_MANAGER.getTransaction().begin();
         TestBean testBean = new TestBean(USER);
-        entityManager.persist(testBean);
+        ENTITY_MANAGER.persist(testBean);
         TestBean child = new TestBean();
         child.setParent(testBean);
-        entityManager.persist(child);
-        entityManager.getTransaction().commit();
-        entityManager.clear();
+        ENTITY_MANAGER.persist(child);
+        ENTITY_MANAGER.getTransaction().commit();
+        ENTITY_MANAGER.clear();
 
         TestSecurityContext.authenticate(null);
         childId = child.getId();
@@ -67,18 +67,18 @@ public class LazyRelationshipTest {
     @Test
     public void accessChild() {
         TestSecurityContext.authenticate(USER);
-        assertThat(entityManager.find(TestBean.class, childId), is(not(nullValue())));
+        assertThat(ENTITY_MANAGER.find(TestBean.class, childId), is(not(nullValue())));
     }
 
     @Test
     public void flushBeforeFind() {
         TestSecurityContext.authenticate(USER);
 
-        entityManager.getTransaction().begin();
-        TestBean child = entityManager.find(TestBean.class, childId);
-        entityManager.find(TestBean.class, parentId);
-        entityManager.flush();
-        entityManager.getTransaction().rollback();
+        ENTITY_MANAGER.getTransaction().begin();
+        TestBean child = ENTITY_MANAGER.find(TestBean.class, childId);
+        ENTITY_MANAGER.find(TestBean.class, parentId);
+        ENTITY_MANAGER.flush();
+        ENTITY_MANAGER.getTransaction().rollback();
         assertFalse(child.isPreUpdate());
     }
 }
