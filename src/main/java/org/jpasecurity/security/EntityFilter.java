@@ -76,8 +76,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class handles the access control.
- * It filters JPQL queries and can evaluate for a specific entity
- * whether it is accessible or not.
+ *
+ * It filters JPQL queries and can evaluate for a specific entity whether it is accessible or not.
+ *
  * @author Arne Limburg
  * @author Stefan Hildebrandt
  */
@@ -129,7 +130,7 @@ public class EntityFilter implements AccessManager {
     }
 
     public FilterResult<String> filterQuery(String query, AccessType accessType) {
-        LOG.debug("Filtering query {}", query);
+        LOG.debug("Filtering query: {}", query);
 
         JpqlCompiledStatement statement = compile(query);
         AccessDefinition accessDefinition = createAccessDefinition(statement, accessType);
@@ -142,11 +143,7 @@ public class EntityFilter implements AccessManager {
         if (where == null) {
             where = queryPreparator.createWhere(accessDefinition.getAccessRules());
             ParserRuleContext parent = statement.getFromClause().getParent();
-            for (int i = parent.getChildCount(); i > 2; i--) {
-                //parent.children.add(i, parent.getChild(i - 1), i);
-                throw new UnsupportedOperationException();
-            }
-            parent.children.add(2, where);
+            parent.children.add(where);
             where.setParent(parent);
         } else {
             JpqlParser.PredicateContext condition = where.predicate();
@@ -159,7 +156,7 @@ public class EntityFilter implements AccessManager {
         }
 
         BaseContext statementNode = (BaseContext) statement.getStatement();
-        LOG.debug("Optimizing filtered query {}", statementNode);
+        LOG.debug("Optimizing filtered query: {}", statementNode.toJpqlString());
 
         optimize(accessDefinition);
         Set<String> parameterNames = compiler.getNamedParameters(accessDefinition.getAccessRules());
@@ -441,13 +438,13 @@ public class EntityFilter implements AccessManager {
                 JpqlParser.ExpressionContext parameter = queryPreparator.createNamedParameter(parameterName);
 
                 if (inNode instanceof JpqlParser.ExplicitTupleInListContext) {
-                    JpqlParser.PredicateContext parent = queryPreparator
+                    JpqlParser.PredicateContext parent = QueryPreparator
                             .createEquals(inNode.expression(0), parameter);
                     for (int i = 1; i < aliasValues.size(); i++) {
                         parameterName = alias + i;
                         queryParameters.put(parameterName, parameterValues.get(i));
                         parameter = queryPreparator.createNamedParameter(parameterName);
-                        JpqlParser.EqualityPredicateContext node = queryPreparator
+                        JpqlParser.EqualityPredicateContext node = QueryPreparator
                                 .createEquals((JpqlParser.ExpressionContext)inNode.getChild(0), parameter);
                         parent = QueryPreparator.createOr(parent, node);
                     }
@@ -576,7 +573,7 @@ public class EntityFilter implements AccessManager {
                 .createParser("1").expression();
         JpqlParser.LiteralExpressionContext numberExpression2 = (JpqlParser.LiteralExpressionContext) JpqlParsingHelper
                 .createParser("1").expression();
-        return queryPreparator.createNotEquals(numberExpression1, numberExpression2);
+        return QueryPreparator.createNotEquals(numberExpression1, numberExpression2);
     }
 
     public static class AccessDefinition {

@@ -20,16 +20,17 @@ import org.jpasecurity.Path;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 import org.jpasecurity.jpql.parser.JpqlParser;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
+import org.jpasecurity.persistence.mapping.ManagedTypeFilter;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Objects;
 
 import static org.jpasecurity.util.Validate.notNull;
@@ -37,6 +38,7 @@ import static org.jpasecurity.util.Validate.notNull;
 /**
  * This implementation of the {@link JpqlVisitorAdapter} evaluates queries in memory,
  * storing the result in the specified {@link QueryEvaluationParameters}.
+ *
  * If the evaluation cannot be performed due to missing information the result is set to <quote>undefined</quote>.
  * To evaluate subselect-query, pluggable implementations of {@link SubQueryEvaluator} are used.
  *
@@ -124,7 +126,7 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
         boolean undefined = false;
         visit(ctx.predicate(0));
         try {
-            if (defaultResult().getResult()) {
+            if (defaultResult().resultIsBoolean() && defaultResult().<Boolean>getResult()) {
                 return stopVisitingChildren();
             }
         } catch (NotEvaluatableException e) {
@@ -133,7 +135,7 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
 
         visit(ctx.predicate(1));
         try {
-            if (defaultResult().getResult()) {
+            if (defaultResult().resultIsBoolean() && defaultResult().<Boolean>getResult()) {
                 return stopVisitingChildren();
             }
         } catch (NotEvaluatableException e) {
@@ -407,7 +409,6 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
         return stopVisitingChildren();
     }
 
-
     @Override
     public QueryEvaluationParameters visitGreaterThanOrEqualPredicate(JpqlParser.GreaterThanOrEqualPredicateContext ctx) {
         try {
@@ -442,7 +443,6 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
             //result is undefined, which is ok here
         }
         return stopVisitingChildren();
-
     }
 
     @Override
@@ -680,84 +680,145 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
 
     @Override
     public QueryEvaluationParameters visitCurrentDateFunction(JpqlParser.CurrentDateFunctionContext ctx) {
-        defaultResult().setResult(new java.sql.Date(new Date().getTime()));
+        defaultResult().setResult(new Date(new java.util.Date().getTime()));
         return stopVisitingChildren();
     }
 
     @Override
     public QueryEvaluationParameters visitCurrentTimeFunction(JpqlParser.CurrentTimeFunctionContext ctx) {
-        defaultResult().setResult(new Time(new Date().getTime()));
+        defaultResult().setResult(new Time(new java.util.Date().getTime()));
         return stopVisitingChildren();
     }
 
     @Override
     public QueryEvaluationParameters visitCurrentTimestampFunction(JpqlParser.CurrentTimestampFunctionContext ctx) {
-        defaultResult().setResult(new Timestamp(new Date().getTime()));
+        defaultResult().setResult(new Timestamp(new java.util.Date().getTime()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitMainEntityPersisterReference(JpqlParser.MainEntityPersisterReferenceContext ctx) {
+        defaultResult().setResult(ManagedTypeFilter.forModel(defaultResult().getMetamodel()).filter(ctx.getText().trim()).getJavaType());
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitStringLiteral(JpqlParser.StringLiteralContext ctx) {
+        defaultResult().setResult(ctx.getText());
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitCharacterLiteral(JpqlParser.CharacterLiteralContext ctx) {
+        defaultResult().setResult(ctx.getText());
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitIntegerLiteral(JpqlParser.IntegerLiteralContext ctx) {
+        defaultResult().setResult(Integer.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitLongLiteral(JpqlParser.LongLiteralContext ctx) {
+        defaultResult().setResult(Long.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitBigIntegerLiteral(JpqlParser.BigIntegerLiteralContext ctx) {
+        defaultResult().setResult(new BigInteger(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitFloatLiteral(JpqlParser.FloatLiteralContext ctx) {
+        defaultResult().setResult(Float.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitDoubleLiteral(JpqlParser.DoubleLiteralContext ctx) {
+        defaultResult().setResult(Double.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitBigDecimalLiteral(JpqlParser.BigDecimalLiteralContext ctx) {
+        defaultResult().setResult(new BigDecimal(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitHexLiteral(JpqlParser.HexLiteralContext ctx) {
+        defaultResult().setResult(Integer.parseInt(ctx.getText(), 16));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitOctalLiteral(JpqlParser.OctalLiteralContext ctx) {
+        defaultResult().setResult(Integer.parseInt(ctx.getText(), 8));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitNullLiteral(JpqlParser.NullLiteralContext ctx) {
+        defaultResult().setResult(null);
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitBooleanLiteral(JpqlParser.BooleanLiteralContext ctx) {
+        defaultResult().setResult(Boolean.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitTimestampLiteral(JpqlParser.TimestampLiteralContext ctx) {
+        defaultResult().setResult(Timestamp.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitDateLiteral(JpqlParser.DateLiteralContext ctx) {
+        defaultResult().setResult(java.sql.Date.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitTimeLiteral(JpqlParser.TimeLiteralContext ctx) {
+        defaultResult().setResult(Time.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitNamedParameter(JpqlParser.NamedParameterContext ctx) {
+        try {
+            defaultResult().setResult(defaultResult().getNamedParameterValue(ctx.identifier().getText()));
+        } catch (NotEvaluatableException e) {
+            defaultResult().setResultUndefined();
+        }
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitPositionalParameter(JpqlParser.PositionalParameterContext ctx) {
+        try {
+            defaultResult().setResult(defaultResult()
+                    .getPositionalParameterValue(Integer.valueOf(ctx.INTEGER_LITERAL().getText())));
+        } catch (NotEvaluatableException e) {
+            defaultResult().setResultUndefined();
+        }
         return stopVisitingChildren();
     }
 
     /*
     @Override
-    public boolean visit(JpqlAbstractSchemaName node, QueryEvaluationParameters data) {
-        data.setResult(ManagedTypeFilter.forModel(data.getMetamodel()).filter(node.toString().trim()).getJavaType());
-        return false;
-    }
-
-    @Override
     public boolean visit(JpqlIdentificationVariable node, QueryEvaluationParameters data) {
         validateChildCount(node, 0);
         try {
             data.setResult(data.getAliasValue(new Alias(node.getValue())));
-        } catch (NotEvaluatableException e) {
-            data.setResultUndefined();
-        }
-        return false;
-    }
-
-    @Override
-    public boolean visit(JpqlIntegerLiteral node, QueryEvaluationParameters data) {
-        validateChildCount(node, 0);
-        data.setResult(new BigDecimal(node.getValue()));
-        return false;
-    }
-
-    @Override
-    public boolean visit(JpqlDecimalLiteral node, QueryEvaluationParameters data) {
-        validateChildCount(node, 0);
-        data.setResult(new BigDecimal(node.getValue()));
-        return false;
-    }
-
-    @Override
-    public boolean visit(JpqlBooleanLiteral node, QueryEvaluationParameters data) {
-        validateChildCount(node, 0);
-        data.setResult(Boolean.valueOf(node.getValue()));
-        return false;
-    }
-
-    @Override
-    public boolean visit(JpqlStringLiteral node, QueryEvaluationParameters data) {
-        validateChildCount(node, 0);
-        data.setResult(node.getValue().substring(1, node.getValue().length() - 1)); //trim quotes
-        return false;
-    }
-
-    @Override
-    public boolean visit(JpqlNamedInputParameter node, QueryEvaluationParameters data) {
-        validateChildCount(node, 1);
-        try {
-            data.setResult(data.getNamedParameterValue(node.getChild(0).getValue()));
-        } catch (NotEvaluatableException e) {
-            data.setResultUndefined();
-        }
-        return false;
-    }
-
-    @Override
-    public boolean visit(JpqlPositionalInputParameter node, QueryEvaluationParameters data) {
-        validateChildCount(node, 0);
-        try {
-            data.setResult(data.getPositionalParameterValue(Integer.parseInt(node.getValue())));
         } catch (NotEvaluatableException e) {
             data.setResultUndefined();
         }

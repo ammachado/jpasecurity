@@ -23,6 +23,7 @@ import java.util.Set;
 
 import javax.persistence.metamodel.Metamodel;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.jpasecurity.Alias;
 import org.jpasecurity.access.SecurePersistenceUnitUtil;
 
@@ -30,10 +31,6 @@ import org.jpasecurity.access.SecurePersistenceUnitUtil;
  * @author Arne Limburg
  */
 public class QueryEvaluationParameters {
-
-    public EvaluationType getEvaluationType() {
-        return evaluationType;
-    }
 
     public enum EvaluationType { OPTIMIZE_QUERY, GET_ALWAYS_EVALUATABLE_RESULT, ACCESS_CHECK }
 
@@ -78,6 +75,10 @@ public class QueryEvaluationParameters {
             parameters.positionalParameters,
             parameters.getEvaluationType()
         );
+    }
+
+    public EvaluationType getEvaluationType() {
+        return evaluationType;
     }
 
     public Metamodel getMetamodel() {
@@ -142,5 +143,9 @@ public class QueryEvaluationParameters {
 
     public void setResultUndefined() {
         this.result = UNDEFINED;
+    }
+
+    public boolean resultIsBoolean() {
+        return !isResultUndefined() && this.result instanceof Boolean;
     }
 }

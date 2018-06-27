@@ -168,10 +168,8 @@ public class JpqlCompiler {
         }
 
         @Override
-        public ValueHolder<Class<?>> visitMainEntityPersisterReference(
-                JpqlParser.MainEntityPersisterReferenceContext ctx) {
-            String entityClassName = ctx.simplePathQualifier().getText();
-
+        public ValueHolder<Class<?>> visitConstructorExpression(JpqlParser.ConstructorExpressionContext ctx) {
+            String entityClassName = ctx.dotIdentifierSequence().getText();
             Class<?> clazz;
             try {
                 clazz = toClass(entityClassName);

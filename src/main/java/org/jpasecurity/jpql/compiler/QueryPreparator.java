@@ -474,10 +474,10 @@ public class QueryPreparator {
     }
 
     public static ParserRuleContext replace(ParserRuleContext oldCtx, ParseTree newCtx) {
-        ParseTree parent = oldCtx.getParent();
+        RuleNode parent = oldCtx.getParent();
         for (int i = 0; i < parent.getChildCount(); i++) {
             if (parent.getChild(i) == oldCtx) {
-                TreeRewriteSupport.setChild((RuleNode)parent, i, newCtx);
+                TreeRewriteSupport.setChild(parent, i, newCtx);
                 return (ParserRuleContext)newCtx;
             }
         }
@@ -581,11 +581,7 @@ public class QueryPreparator {
             return super.visitSelectionList(ctx);
         }
 
-
         /*
-
-
-
         public boolean visit(JpqlSelectExpressions node, List<ParserTree> nodes) {
             if (node.getChildCount() == 1) {
                 List<ParserTree> constructorParameters = new ArrayList<ParserTree>();

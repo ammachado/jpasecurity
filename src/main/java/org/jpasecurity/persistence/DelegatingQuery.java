@@ -222,4 +222,9 @@ public class DelegatingQuery<T> implements TypedQuery<T> {
         }
         return delegate.unwrap(cls);
     }
+
+    @Override
+    public String toString() {
+        return delegate.toString();
+    }
 }

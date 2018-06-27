@@ -94,6 +94,11 @@ public class SecureQuery<T> extends DelegatingQuery<T> {
         return proxyResult;
     }
 
+    @Override
+    public String toString() {
+        return "SecureQuery[" + super.toString() + "]";
+    }
+
     T handleConstructorReturnType(Object parameter)
         throws InstantiationException, IllegalAccessException, InvocationTargetException {
         try {
