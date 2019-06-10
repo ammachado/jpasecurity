@@ -67,17 +67,19 @@ public class MockitoPersistenceProvider implements PersistenceProvider {
         return createEntityManagerFactory(info.getPersistenceUnitName(), map);
     }
 
-    private class MockitoEntityManagerFactory implements EntityManagerFactory {
+    private static class MockitoEntityManagerFactory implements EntityManagerFactory {
 
-        private boolean open = true;
+        private boolean open;
         private Metamodel metamodel;
         private CriteriaBuilder criteriaBuilder;
 
         MockitoEntityManagerFactory() {
+            open = true;
             metamodel = mock(Metamodel.class);
             criteriaBuilder = mock(CriteriaBuilder.class);
         }
 
+        @Override
         public EntityManager createEntityManager() {
             if (!open) {
                 throw new IllegalStateException("already closed");
@@ -85,37 +87,46 @@ public class MockitoPersistenceProvider implements PersistenceProvider {
             EntityManager entityManager = mock(EntityManager.class);
             when(entityManager.getCriteriaBuilder()).thenReturn(criteriaBuilder);
             when(entityManager.getDelegate()).thenReturn(entityManager);
+            when(entityManager.getMetamodel()).thenReturn(metamodel);
             return entityManager;
         }
 
+        @Override
         public EntityManager createEntityManager(@SuppressWarnings("rawtypes") Map map) {
             return createEntityManager();
         }
 
+        @Override
         public boolean isOpen() {
             return open;
         }
 
+        @Override
         public void close() {
             open = false;
         }
 
+        @Override
         public CriteriaBuilder getCriteriaBuilder() {
             return criteriaBuilder;
         }
 
+        @Override
         public Metamodel getMetamodel() {
             return metamodel;
         }
 
+        @Override
         public Map<String, Object> getProperties() {
             return null;
         }
 
+        @Override
         public Cache getCache() {
             return null;
         }
 
+        @Override
         public PersistenceUnitUtil getPersistenceUnitUtil() {
             return null;
         }
@@ -144,6 +155,7 @@ public class MockitoPersistenceProvider implements PersistenceProvider {
         }
     }
 
+    @Override
     public ProviderUtil getProviderUtil() {
         return null;
     }

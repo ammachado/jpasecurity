@@ -288,7 +288,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
      * {@inheritDoc}
      */
     public boolean visit(JpqlDistinctPath node, StringBuilder query) {
-        query.append(" DISTINCT ");
+        query.append("DISTINCT ");
         return true;
     }
 

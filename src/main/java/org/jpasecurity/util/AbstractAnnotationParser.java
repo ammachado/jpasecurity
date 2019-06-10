@@ -31,7 +31,7 @@ import java.util.Collections;
  */
 public abstract class AbstractAnnotationParser<A extends Annotation, D> {
 
-    private Collection<Class<A>> annotationTypes;
+    private final Collection<Class<A>> annotationTypes;
 
     /**
      * Creates an annotation parser that extracts the annotation to parse from

@@ -77,7 +77,7 @@ public class AccessRulesCompilerTest {
         when(nameAttribute.getJavaType()).thenReturn(String.class);
         when(stringType.getPersistenceType()).thenReturn(PersistenceType.BASIC);
         AccessRulesParser parser
-            = new AccessRulesParser("interface", metamodel, securityContext, new XmlAccessRulesProvider("interface"));
+            = new AccessRulesParser(metamodel, securityContext, new XmlAccessRulesProvider("interface"));
         assertEquals(2, parser.parseAccessRules().size());
     }
 

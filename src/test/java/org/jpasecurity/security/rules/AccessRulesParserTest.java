@@ -16,7 +16,6 @@
 package org.jpasecurity.security.rules;
 
 import static java.util.Collections.singleton;
-
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -54,7 +53,7 @@ public class AccessRulesParserTest {
     @Before
     public void createAccessRulesParser() {
         when(metamodel.getManagedTypes()).thenReturn((Set)singleton(managedType));
-        parser = new AccessRulesParser("test", metamodel, securityContext, accessRulesProvider);
+        parser = new AccessRulesParser(metamodel, securityContext, accessRulesProvider);
     }
 
     @Test

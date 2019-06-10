@@ -34,7 +34,6 @@ import org.jpasecurity.model.client.ProcessInstanceProcessTaskInstance;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -178,11 +177,11 @@ public class ClientTest {
     }
 
     @Test
-    @Ignore
+    //@Ignore
     public void queryOperationsTracking() {
         TestSecurityContext.authenticate(EMAIL);
         List<ClientOperationsTracking> tracking = entityManager
-            .createQuery("SELECT t FROM ClientOperationsTracking t WHERE t.id = :id",
+            .createQuery("SELECT t FROM ClientOperationsTracking t WHERE t.client.id = :id",
                 ClientOperationsTracking.class)
             .setParameter("id", operationsTrackingId)
             .getResultList();

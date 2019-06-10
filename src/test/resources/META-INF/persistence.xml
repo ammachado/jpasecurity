@@ -3,6 +3,7 @@
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
              version="2.0">
+
     <persistence-unit name="persistence-test" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>security.orm.xml</mapping-file>
@@ -27,18 +28,14 @@
 
     </persistence-unit>
 
-    <persistence-unit
-        name="unit-test"
-        transaction-type="RESOURCE_LOCAL">
+    <persistence-unit name="unit-test" transaction-type="RESOURCE_LOCAL">
         <mapping-file>META-INF/parent.orm.xml</mapping-file>
         <mapping-file>META-INF/child.orm.xml</mapping-file>
         <mapping-file>META-INF/empty.orm.xml</mapping-file>
         <mapping-file>security.orm.xml</mapping-file>
     </persistence-unit>
 
-    <persistence-unit
-        name="integration-test"
-        transaction-type="JTA">
+    <persistence-unit name="integration-test" transaction-type="JTA">
         <provider>org.jpasecurity.persistence.SecurePersistenceProvider</provider>
         <non-jta-data-source>java:/DefaultDS</non-jta-data-source>
         <mapping-file>security.orm.xml</mapping-file>
@@ -143,6 +140,7 @@
         </properties>
 
     </persistence-unit>
+
     <persistence-unit name="objectidentity-test" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>security.orm.xml</mapping-file>
@@ -170,6 +168,7 @@
         </properties>
 
     </persistence-unit>
+
     <persistence-unit name="annotation-based-method-access" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>META-INF/test.orm.xml</mapping-file>
@@ -198,6 +197,7 @@
         </properties>
 
     </persistence-unit>
+
     <persistence-unit name="grandparent-grandchild" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>security.orm.xml</mapping-file>
@@ -304,6 +304,7 @@
         </properties>
 
     </persistence-unit>
+
     <persistence-unit name="entity-lifecycle-test" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>security.orm.xml</mapping-file>
@@ -340,6 +341,7 @@
         </properties>
 
     </persistence-unit>
+
     <persistence-unit name="first-level-test" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>security.orm.xml</mapping-file>
@@ -615,6 +617,7 @@
         </properties>
 
     </persistence-unit>
+
     <persistence-unit name="acl-model" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>security.orm.xml</mapping-file>
@@ -645,6 +648,7 @@
         </properties>
 
     </persistence-unit>
+
     <persistence-unit name="acl-model-nocache" transaction-type="RESOURCE_LOCAL">
 
         <mapping-file>security.orm.xml</mapping-file>
@@ -816,6 +820,8 @@
     </persistence-unit>
 
     <persistence-unit name="spring-contacts" transaction-type="RESOURCE_LOCAL">
+
+        <provider>org.jpasecurity.persistence.SecurePersistenceProvider</provider>
 
         <mapping-file>security.orm.xml</mapping-file>
 

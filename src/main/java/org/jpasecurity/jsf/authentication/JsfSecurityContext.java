@@ -52,7 +52,7 @@ public class JsfSecurityContext extends AbstractRoleBasedSecurityContext {
 
     protected boolean isCallerInRole(String roleName) {
         HttpServletRequest request = getRequest();
-        return request != null? request.isUserInRole(roleName): false;
+        return request != null && request.isUserInRole(roleName);
     }
 
     private HttpServletRequest getRequest() {

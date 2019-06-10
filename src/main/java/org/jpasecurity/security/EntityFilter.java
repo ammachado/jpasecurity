@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-
 package org.jpasecurity.security;
 
 import static javax.persistence.metamodel.Attribute.PersistentAttributeType.BASIC;
@@ -99,7 +98,7 @@ public class EntityFilter implements AccessManager {
     private final Metamodel metamodel;
     private final SecurePersistenceUnitUtil persistenceUnitUtil;
     private final JpqlParser parser;
-    private final Map<String, JpqlCompiledStatement> statementCache = new HashMap<String, JpqlCompiledStatement>();
+    private final Map<String, JpqlCompiledStatement> statementCache = new HashMap<>();
     private final QueryEvaluator queryEvaluator;
     private final QueryPreparator queryPreparator = new QueryPreparator();
     private final Collection<AccessRule> accessRules;
@@ -182,11 +181,11 @@ public class EntityFilter implements AccessManager {
         }
         final String optimizedJpqlStatement = ((SimpleNode)statementNode).toJpqlString();
         LOG.debug("Returning optimized query " + optimizedJpqlStatement);
-        return new FilterResult<String>(optimizedJpqlStatement,
-                                        parameters.size() > 0? parameters: null,
-                                        statement.getConstructorArgReturnType(),
-                                        statement.getSelectedPaths(),
-                                        statement.getTypeDefinitions());
+        return new FilterResult<>(optimizedJpqlStatement,
+                                  parameters.size() > 0? parameters: null,
+                                  statement.getConstructorArgReturnType(),
+                                  statement.getSelectedPaths(),
+                                  statement.getTypeDefinitions());
     }
 
     protected AccessDefinition createAccessDefinition(JpqlCompiledStatement statement, AccessType accessType) {
@@ -205,8 +204,8 @@ public class EntityFilter implements AccessManager {
         AccessDefinition accessDefinition = null;
         boolean restricted = false;
         for (Map.Entry<Path, Class<?>> selectedType: selectedTypes.entrySet()) {
-            Set<JpqlAccessRule> appliedRules = new HashSet<JpqlAccessRule>();
-            Set<Class<?>> restrictedTypes = new HashSet<Class<?>>();
+            Set<JpqlAccessRule> appliedRules = new HashSet<>();
+            Set<Class<?>> restrictedTypes = new HashSet<>();
             AccessDefinition typedAccessDefinition = null;
             for (AccessRule accessRule: accessRules) {
                 if (!appliedRules.contains(accessRule.getStatement())) {
@@ -223,20 +222,20 @@ public class EntityFilter implements AccessManager {
                     }
                 }
             }
-            Map<JpqlAccessRule, Set<AccessRule>> mayBeRules = new HashMap<JpqlAccessRule, Set<AccessRule>>();
+            Map<JpqlAccessRule, Set<AccessRule>> mayBeRules = new HashMap<>();
             for (AccessRule accessRule : accessRules) {
                 if (!appliedRules.contains(accessRule.getStatement())) {
                     if (accessRule.mayBeAssignable(selectedType.getValue(), metamodel)) {
                         Set<AccessRule> accessRulesSet = mayBeRules.get(accessRule.getStatement());
                         if (accessRulesSet == null) {
-                            accessRulesSet = new HashSet<AccessRule>();
+                            accessRulesSet = new HashSet<>();
                             mayBeRules.put((JpqlAccessRule)accessRule.getStatement(), accessRulesSet);
                         }
                         accessRulesSet.add(accessRule);
                     }
                 }
             }
-            Map<Class<?>, Set<AccessRule>> bestMayBeRules = new HashMap<Class<?>, Set<AccessRule>>();
+            Map<Class<?>, Set<AccessRule>> bestMayBeRules = new HashMap<>();
             for (Set<AccessRule> accessRulesByStatement : mayBeRules.values()) {
                 AccessRule bestRule = null;
                 Class<?> bestRuleSelectedType = null;
@@ -253,13 +252,15 @@ public class EntityFilter implements AccessManager {
                         }
                     }
                 }
-                Class<?> restrictedType = bestRule.getSelectedType(metamodel);
-                Set<AccessRule> restrictions = bestMayBeRules.get(restrictedType);
-                if (restrictions == null) {
-                    restrictions = new HashSet<AccessRule>();
-                    bestMayBeRules.put(restrictedType, restrictions);
+                if (bestRule != null) {
+                    Class<?> restrictedType = bestRule.getSelectedType(metamodel);
+                    Set<AccessRule> restrictions = bestMayBeRules.get(restrictedType);
+                    if (restrictions == null) {
+                        restrictions = new HashSet<>();
+                        bestMayBeRules.put(restrictedType, restrictions);
+                    }
+                    restrictions.add(bestRule);
                 }
-                restrictions.add(bestRule);
             }
             for (Entry<Class<?>, Set<AccessRule>> accessRules : bestMayBeRules.entrySet()) {
                 restricted = true;
@@ -270,7 +271,6 @@ public class EntityFilter implements AccessManager {
                     }
                 }
                 if (!accessRules.getValue().isEmpty()) {
-                    restricted = true;
                     restrictedTypes.add(accessRules.getKey());
                     for (EntityType<?> entityType: forModel(metamodel).filterEntities(accessRules.getKey())) {
                         AccessDefinition preparedAccessRule = null;
@@ -561,7 +561,7 @@ public class EntityFilter implements AccessManager {
     }
 
     private Set<Alias> getAliases(JpqlCompiledStatement statement) {
-        Set<Alias> aliases = new HashSet<Alias>();
+        Set<Alias> aliases = new HashSet<>();
         for (TypeDefinition typeDefinition: statement.getTypeDefinitions()) {
             if (typeDefinition.getAlias() != null) {
                 aliases.add(typeDefinition.getAlias());

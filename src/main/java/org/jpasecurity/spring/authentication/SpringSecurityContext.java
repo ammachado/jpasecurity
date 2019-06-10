@@ -33,12 +33,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
  */
 public class SpringSecurityContext extends AbstractRoleBasedSecurityContext {
 
-    private SecurityContext context;
+    private final SecurityContext context;
 
     public SpringSecurityContext() {
         context = SecurityContextHolder.getContext();
     }
 
+    @Override
     public Object getPrincipal() {
         Authentication authentication = context.getAuthentication();
         if (authentication == null || (authentication instanceof AnonymousAuthenticationToken)) {
@@ -47,12 +48,13 @@ public class SpringSecurityContext extends AbstractRoleBasedSecurityContext {
         return authentication.getPrincipal();
     }
 
+    @Override
     public Collection<String> getRoles() {
         Authentication authentication = context.getAuthentication();
         if (authentication == null || authentication.getAuthorities() == null) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
-        List<String> roles = new ArrayList<String>();
+        List<String> roles = new ArrayList<>();
         for (GrantedAuthority authority : authentication.getAuthorities()) {
             roles.add(authority.getAuthority());
         }

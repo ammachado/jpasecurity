@@ -18,6 +18,7 @@ package org.jpasecurity.collection;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -45,8 +46,8 @@ import org.junit.Test;
  */
 public class PropertyAccessTest {
 
-    public static final String USER1 = "user1";
-    public static final String USER2 = "user2";
+    private static final String USER1 = "user1";
+    private static final String USER2 = "user2";
     private static final String ADMIN = "admin";
 
     @Test
@@ -125,7 +126,7 @@ public class PropertyAccessTest {
         final MethodAccessAnnotationTestBean bean2
             = entityManager2.find(MethodAccessAnnotationTestBean.class, bean.getId());
         for (MethodAccessAnnotationTestBean methodAccessAnnotationTestBean: bean2.getChildren()) {
-            methodAccessAnnotationTestBean.getId();
+            assertNotEquals(0, methodAccessAnnotationTestBean.getId());
         }
         entityManager2.getTransaction().commit();
     }

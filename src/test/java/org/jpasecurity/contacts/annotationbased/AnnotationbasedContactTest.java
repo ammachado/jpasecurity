@@ -20,7 +20,6 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-import java.util.Collections;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -47,8 +46,7 @@ public class AnnotationbasedContactTest {
 
     @BeforeClass
     public static void createEntityManagerFactory() {
-        entityManagerFactory = Persistence.createEntityManagerFactory("annotationbased-contacts",
-                Collections.singletonMap("hibernate.show_sql", "true"));
+        entityManagerFactory = Persistence.createEntityManagerFactory("annotationbased-contacts");
     }
 
     @AfterClass

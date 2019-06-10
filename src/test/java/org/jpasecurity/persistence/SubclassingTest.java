@@ -35,7 +35,6 @@ import org.jpasecurity.model.SuperclassReferencingBean;
 import org.jpasecurity.security.authentication.TestSecurityContext;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -95,8 +94,6 @@ public class SubclassingTest {
         entityManager.close();
     }
 
-    //TODO
-    @Ignore
     @Test
     public void accessRulesOnSubclassesWithGenericSuperclass() {
         EntityManager entityManager = factory.createEntityManager();

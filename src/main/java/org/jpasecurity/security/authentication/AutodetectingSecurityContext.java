@@ -41,10 +41,6 @@ import org.slf4j.LoggerFactory;
  *     a {@link org.jpasecurity.jsf.authentication.JsfSecurityContext} is used.
  *   </li>
  *   <li>
- *     If an <tt>javax.faces.context.FacesContext</tt> is present in the classpath,
- *     a {@link org.jpasecurity.jsf.authentication.JsfSecurityContext} is used.
- *   </li>
- *   <li>
  *     If an <tt>javax.ejb.EJBContext</tt> is accessible via JNDI lookup,
  *     an {@link EjbSecurityContext} is used.
  *   </li>
@@ -59,8 +55,9 @@ public class AutodetectingSecurityContext implements SecurityContext {
     private static final Logger LOG = LoggerFactory.getLogger(AutodetectingSecurityContext.class);
 
     private static final List<String> SECURITY_CONTEXT_CLASS_NAMES;
+
     static {
-        List<String> authenticationProviderClassNames = new ArrayList<String>();
+        List<String> authenticationProviderClassNames = new ArrayList<>();
         authenticationProviderClassNames.add("org.jpasecurity.spring.authentication.SpringSecurityContext");
         authenticationProviderClassNames.add("org.jpasecurity.security.authentication.CdiSecurityContext");
         authenticationProviderClassNames.add("org.jpasecurity.jsf.authentication.JsfSecurityContext");
@@ -68,7 +65,7 @@ public class AutodetectingSecurityContext implements SecurityContext {
         SECURITY_CONTEXT_CLASS_NAMES = Collections.unmodifiableList(authenticationProviderClassNames);
     }
 
-    private SecurityContext securityContext;
+    private final SecurityContext securityContext;
 
     public AutodetectingSecurityContext() {
         securityContext = autodetectSecurityContext();
@@ -84,9 +81,7 @@ public class AutodetectingSecurityContext implements SecurityContext {
                 SecurityContext securityContext = securityContextClass.newInstance();
                 LOG.info("using " + providerClassName);
                 return securityContext;
-            } catch (NoClassDefFoundError e) {
-                //ignore and try next authentication provider
-            } catch (ReflectiveOperationException e) {
+            } catch (NoClassDefFoundError | ReflectiveOperationException e) {
                 //ignore and try next authentication provider
             }
         }

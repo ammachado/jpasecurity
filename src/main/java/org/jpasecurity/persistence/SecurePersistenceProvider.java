@@ -22,8 +22,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceException;
@@ -34,16 +32,18 @@ import javax.xml.xpath.XPathExpressionException;
 
 import org.jpasecurity.SecurityContext;
 import org.jpasecurity.security.rules.AccessRulesProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
 public class SecurePersistenceProvider implements PersistenceProvider {
 
-    private static final Logger LOG = Logger.getLogger(SecurePersistenceProvider.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(SecurePersistenceProvider.class.getName());
 
     public static final String PERSISTENCE_PROVIDER_PROPERTY = "javax.persistence.provider";
-    static final String NATIVE_PERSISTENCE_PROVIDER_PROPERTY = "org.jpasecurity.persistence.provider";
-    static final String SECURITY_CONTEXT_PROPERTY = "org.jpasecurity.security.context";
-    static final String ACCESS_RULES_PROVIDER_PROPERTY = "org.jpasecurity.security.rules.provider";
+    private static final String NATIVE_PERSISTENCE_PROVIDER_PROPERTY = "org.jpasecurity.persistence.provider";
+    private static final String SECURITY_CONTEXT_PROPERTY = "org.jpasecurity.security.context";
+    private static final String ACCESS_RULES_PROVIDER_PROPERTY = "org.jpasecurity.security.rules.provider";
     private static final String DEFAULT_ORM_XML_LOCATION = "META-INF/orm.xml";
     private static final String DEFAULT_SECURITY_CONTEXT_PROPERTY
         = "org.jpasecurity.security.authentication.AutodetectingSecurityContext";
@@ -51,6 +51,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         = "org.jpasecurity.security.rules.XmlAccessRulesProvider";
 
     @Override
+    @SuppressWarnings({"unchecked"})
     public EntityManagerFactory createContainerEntityManagerFactory(PersistenceUnitInfo unitInfo, Map properties) {
         if (properties == null) {
             properties = new HashMap<String, Object>();
@@ -63,7 +64,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         }
         EntityManagerFactory nativeFactory
             = nativePersistenceProvider.createContainerEntityManagerFactory(unitInfo, properties);
-        List<String> ormXmlLocations = new ArrayList<String>(unitInfo.getMappingFileNames());
+        List<String> ormXmlLocations = new ArrayList<>(unitInfo.getMappingFileNames());
         ormXmlLocations.add(DEFAULT_ORM_XML_LOCATION);
         Class<? extends SecurityContext> securityContextType = createSecurityContextType(unitInfo, properties);
         Class<? extends AccessRulesProvider> accessRulesProviderType
@@ -76,6 +77,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public EntityManagerFactory createEntityManagerFactory(String unitName, Map properties) {
         LOG.info("Creating EntityManagerFactory");
         if (properties == null) {
@@ -89,12 +91,11 @@ public class SecurePersistenceProvider implements PersistenceProvider {
                 = Thread.currentThread().getContextClassLoader().getResources("META-INF/persistence.xml");
             xmlParser = new XmlParser(Collections.list(persistenceXmls));
         } catch (Exception e) {
-            LOG.log(Level.WARNING, "Could not initialize xml parser", e);
+            LOG.warn("Could not initialize xml parser", e);
             return null;
         }
         if (!xmlParser.hasDocuments() && !properties.containsKey(PERSISTENCE_PROVIDER_PROPERTY)) {
-            LOG.log(Level.WARNING,
-                "Could not find any persistence.xml nor the " + PERSISTENCE_PROVIDER_PROPERTY + " property");
+            LOG.warn("Could not find any persistence.xml nor the " + PERSISTENCE_PROVIDER_PROPERTY + " property");
             return null;
         }
 
@@ -104,7 +105,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             if (!className.equals(properties.get(PERSISTENCE_PROVIDER_PROPERTY))
                 && !className.equals(xmlParser.parsePersistenceProperty(unitName, PERSISTENCE_PROVIDER_PROPERTY))
                 && !className.equals(xmlParser.parsePersistenceProvider(unitName))) {
-                LOG.log(Level.CONFIG, "No configuration for JPA Security found");
+                LOG.warn("No configuration for JPA Security found");
                 return null;
             }
         } catch (XPathExpressionException e) {
@@ -119,7 +120,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         try {
             EntityManagerFactory nativeFactory
                 = nativePersistenceProvider.createEntityManagerFactory(unitName, properties);
-            List<String> ormXmlLocations = new ArrayList<String>(xmlParser.parseMappingFileNames(unitName));
+            List<String> ormXmlLocations = new ArrayList<>(xmlParser.parseMappingFileNames(unitName));
             ormXmlLocations.add(DEFAULT_ORM_XML_LOCATION);
             Class<? extends SecurityContext> securityContextType
                 = createSecurityContextType(unitName, properties, xmlParser);
@@ -131,11 +132,12 @@ public class SecurePersistenceProvider implements PersistenceProvider {
                                                   securityContextType,
                                                   accessRulesProviderType);
         } catch (XPathExpressionException e) {
-            LOG.log(Level.WARNING, "Could not parse mapping files", e);
+            LOG.warn("Could not parse mapping files", e);
             return null;
         }
     }
 
+    @SuppressWarnings("unchecked")
     public void generateSchema(PersistenceUnitInfo unitInfo, Map properties) {
         if (properties == null) {
             properties = new HashMap();
@@ -149,6 +151,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         nativePersistenceProvider.generateSchema(unitInfo, properties);
     }
 
+    @SuppressWarnings("unchecked")
     public boolean generateSchema(String unitName, Map properties) {
         if (properties == null) {
             properties = new HashMap();
@@ -227,15 +230,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         if (securityContextClassName == null) {
             securityContextClassName = parser.parsePersistenceProperty(unit, SECURITY_CONTEXT_PROPERTY);
         }
-        if (securityContextClassName == null) {
-            securityContextClassName = DEFAULT_SECURITY_CONTEXT_PROPERTY;
-        }
-        try {
-            return (Class<? extends SecurityContext>)Thread.currentThread().getContextClassLoader()
-                    .loadClass(securityContextClassName);
-        } catch (ClassNotFoundException e) {
-            throw new PersistenceException(e);
-        }
+        return createInstance(securityContextClassName, DEFAULT_SECURITY_CONTEXT_PROPERTY);
     }
 
     private Class<? extends SecurityContext> createSecurityContextType(PersistenceUnitInfo persistenceUnitInfo,
@@ -244,15 +239,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         if (securityContextClassName == null) {
             securityContextClassName = (String)persistenceUnitInfo.getProperties().get(SECURITY_CONTEXT_PROPERTY);
         }
-        if (securityContextClassName == null) {
-            securityContextClassName = DEFAULT_SECURITY_CONTEXT_PROPERTY;
-        }
-        try {
-            return (Class<? extends SecurityContext>)getClassLoader(persistenceUnitInfo)
-                    .loadClass(securityContextClassName);
-        } catch (ClassNotFoundException e) {
-            throw new PersistenceException(e);
-        }
+        return createInstance(securityContextClassName, DEFAULT_SECURITY_CONTEXT_PROPERTY);
     }
 
     private Class<? extends AccessRulesProvider> createAccessRulesProviderType(String unit,
@@ -263,15 +250,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
         if (accessRulesProviderClassName == null) {
             accessRulesProviderClassName = parser.parsePersistenceProperty(unit, ACCESS_RULES_PROVIDER_PROPERTY);
         }
-        if (accessRulesProviderClassName == null) {
-            accessRulesProviderClassName = DEFAULT_ACCESS_RULES_PROVIDER_CLASS;
-        }
-        try {
-            return (Class<? extends AccessRulesProvider>)Thread.currentThread().getContextClassLoader()
-                    .loadClass(accessRulesProviderClassName);
-        } catch (ClassNotFoundException e) {
-            throw new PersistenceException(e);
-        }
+        return createInstance(accessRulesProviderClassName, DEFAULT_ACCESS_RULES_PROVIDER_CLASS);
     }
 
     private Class<? extends AccessRulesProvider> createAccessRulesProviderType(PersistenceUnitInfo persistenceUnitInfo,
@@ -281,17 +260,21 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             accessRulesProviderClassName
                 = (String)persistenceUnitInfo.getProperties().get(ACCESS_RULES_PROVIDER_PROPERTY);
         }
-        if (accessRulesProviderClassName == null) {
-            accessRulesProviderClassName = DEFAULT_ACCESS_RULES_PROVIDER_CLASS;
+        return createInstance(accessRulesProviderClassName, DEFAULT_ACCESS_RULES_PROVIDER_CLASS);
+    }
+
+    private static <T> Class<T> createInstance(String className, String defaultClassName) {
+        if (className == null) {
+            className = defaultClassName;
         }
         try {
-            return (Class<? extends AccessRulesProvider>)getClassLoader(persistenceUnitInfo)
-                    .loadClass(accessRulesProviderClassName);
+            return loadClass(className);
         } catch (ClassNotFoundException e) {
             throw new PersistenceException(e);
         }
     }
 
+    @SuppressWarnings("unchecked")
     private PersistenceProvider createNativePersistenceProvider(PersistenceUnitInfo persistenceUnitInfo,
                                                                 Map properties) {
         String overriddenPersistenceProviderClassName = (String)properties.get(PERSISTENCE_PROVIDER_PROPERTY);
@@ -329,11 +312,12 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             XmlParser parser = new XmlParser(Collections.list(persistenceXmls));
             return createNativePersistenceProvider(unitName, properties, parser);
         } catch (Exception e) {
-            LOG.log(Level.WARNING, "Could not initialize xml parser", e);
+            LOG.warn("Could not initialize xml parser", e);
             return null;
         }
     }
 
+    @SuppressWarnings("unchecked")
     private PersistenceProvider createNativePersistenceProvider(String unitName, Map properties, XmlParser xmlParser) {
         String overriddenPersistenceProviderClassName = (String)properties.get(PERSISTENCE_PROVIDER_PROPERTY);
         if (isOtherPersistenceProvider(overriddenPersistenceProviderClassName)) {
@@ -346,7 +330,7 @@ public class SecurePersistenceProvider implements PersistenceProvider {
 
         try {
             if (xmlParser.parsePersistenceUnit(unitName).isEmpty()) {
-                LOG.log(Level.WARNING, "Could not find any persistence unit called {0}", unitName);
+                LOG.warn("Could not find any persistence unit called {}", unitName);
                 return null;
             }
         } catch (XPathExpressionException e) {
@@ -384,5 +368,10 @@ public class SecurePersistenceProvider implements PersistenceProvider {
             return persistenceUnitInfo.getClassLoader();
         }
         return Thread.currentThread().getContextClassLoader();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Class<T> loadClass(String className) throws ClassNotFoundException {
+        return (Class<T>)Thread.currentThread().getContextClassLoader().loadClass(className);
     }
 }

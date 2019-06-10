@@ -47,9 +47,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 public class AclContactsTestData extends ContactsTestData {
 
-    private AuthenticationManager authenticationManager;
-    private MutableAclService aclService;
-    private PlatformTransactionManager transactionManager;
+    private final AuthenticationManager authenticationManager;
+    private final MutableAclService aclService;
+    private final PlatformTransactionManager transactionManager;
 
     public AclContactsTestData(AuthenticationManager authenticationManager,
                                MutableAclService aclService,

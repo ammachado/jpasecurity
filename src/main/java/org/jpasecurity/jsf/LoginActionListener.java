@@ -44,7 +44,7 @@ public class LoginActionListener implements ActionListener {
         try {
             loginAction.invoke(context.getELContext(), new Object[] {username.getValue(), password.getValue()});
             NavigationHandler navigationHandler = context.getApplication().getNavigationHandler();
-            String outcome = (String)context.getExternalContext().getRequestParameterMap().get("outcome");
+            String outcome = context.getExternalContext().getRequestParameterMap().get("outcome");
             if (outcome != null) {
                 navigationHandler.handleNavigation(context, null, outcome);
             }
