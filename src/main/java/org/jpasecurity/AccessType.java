@@ -22,8 +22,6 @@ public enum AccessType {
 
     CREATE, READ, UPDATE, DELETE;
 
-    public static final AccessType[] ALL = values();
-
     public boolean isWriteAccess() {
         return !this.equals(READ);
     }

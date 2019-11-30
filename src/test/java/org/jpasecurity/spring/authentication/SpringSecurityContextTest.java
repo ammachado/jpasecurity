@@ -47,7 +47,6 @@ public class SpringSecurityContextTest extends AbstractSecurityContextTest {
         }
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(principal);
-
         willReturn(grantedAuthorities).given(authentication).getAuthorities();
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
