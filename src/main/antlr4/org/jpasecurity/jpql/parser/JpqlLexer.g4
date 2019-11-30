@@ -39,9 +39,9 @@ INTEGER_NUMBER : ('0' | '1'..'9' '0'..'9'*) ;
 
 LONG_LITERAL : INTEGER_NUMBER L;
 
-BIG_INTEGER_LITERAL : INTEGER_NUMBER ('bi'|'BI');
+BIG_INTEGER_LITERAL : INTEGER_NUMBER B I;
 
-HEX_LITERAL : '0' ('x'|'X') HEX_DIGIT+ L? ;
+HEX_LITERAL : '0' X HEX_DIGIT+ L? ;
 
 fragment
 HEX_DIGIT : ('0'..'9'|'a'..'f'|'A'..'F') ;
@@ -60,7 +60,7 @@ FLOATING_POINT_NUMBER
 
 DOUBLE_LITERAL : FLOATING_POINT_NUMBER D;
 
-BIG_DECIMAL_LITERAL : FLOATING_POINT_NUMBER ('bd'|'BD');
+BIG_DECIMAL_LITERAL : FLOATING_POINT_NUMBER B D;
 
 fragment
 EXPONENT
@@ -99,10 +99,11 @@ UNICODE_ESCAPE
 	:	'\\' 'u' HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT
 	;
 
-// ESCAPE start tokens
-TRUE				: 'true';
-FALSE				: 'false';
+TIMESTAMP_ESCAPE_START : '{ts';
+DATE_ESCAPE_START : '{d';
+TIME_ESCAPE_START : '{t';
 
+// ESCAPE start tokens
 EQUAL				: '=';
 NOT_EQUAL			: '!=' | '^=' | '<>';
 GREATER				: '>';
@@ -127,26 +128,25 @@ SEMICOLON			: ';';
 COLON				: ':';
 PIPE				: '|';
 QUESTION_MARK		: '?';
-ARROW				: '->';
+PERCENT             : '%';
 
 // Keywords
 ABS					: A B S;
-AS					: A S;
 ALL					: A L L;
 AND					: A N D;
 ANY					: A N Y;
+AS					: A S;
 ASC					: A S C;
 AVG					: A V G;
+BIT_LENGTH          : B I T '_' L E N G T H;
 BY					: B Y;
 BETWEEN				: B E T W E E N;
-BIT_LENGTH			: B I T '_' L E N G T H;
 BOTH				: B O T H;
 CASE				: C A S E;
-CHAR_LENGTH			: C H A R '_' L E N G T H;
-CHARACTER_LENGTH	: C H A R A C T E R '_' L E N G T H;
+CAST                : C A S T;
+CHARACTER_LENGTH    : C H A R A C T E R '_' L E N G T H;
 CLASS				: C L A S S;
 COALESCE			: C O A L E S C E;
-COLLATE				: C O L L A T E;
 CONCAT				: C O N C A T;
 COUNT				: C O U N T;
 CURRENT_DATE		: C U R R E N T '_' D A T E;
@@ -163,6 +163,7 @@ END					: E N D;
 ENTRY				: E N T R Y;
 ESCAPE				: E S C A P E;
 EXISTS				: E X I S T S;
+FALSE               : F A L S E;
 FETCH				: F E T C H;
 FROM				: F R O M;
 FUNCTION			: F U N C T I O N;
@@ -170,13 +171,12 @@ GROUP				: G R O U P;
 HAVING				: H A V I N G;
 IN					: I N;
 INDEX				: I N D E X;
-INNER				: I N N E R;
-INTO 				: I N T O;
+INNER               : I N N E R;
 IS					: I S;
 JOIN				: J O I N;
 KEY					: K E Y;
-LEADING				: L E A D I N G;
-LEFT				: L E F T;
+LEADING             : L E A D I N G;
+LEFT                : L E F T;
 LENGTH				: L E N G T H;
 LIKE				: L I K E;
 LIMIT				: L I M I T;
@@ -201,6 +201,7 @@ OR					: O R;
 ORDER				: O R D E R;
 OUTER				: O U T E R;
 POSITION			: P O S I T I O N;
+RIGHT               : R I G H T;
 SELECT				: S E L E C T;
 SET					: S E T;
 SIZE				: S I [zZ] E;
@@ -212,6 +213,7 @@ THEN				: T H E N;
 TRAILING			: T R A I L I N G;
 TREAT				: T R E A T;
 TRIM				: T R I M;
+TRUE                : T R U E;
 TYPE				: T Y P E;
 UPDATE				: U P D A T E;
 UNKNOWN				: U N K N O W N;
@@ -233,27 +235,15 @@ HINT_END
 
 ACCESS                  : A C C E S S;
 CREATE                  : C R E A T E;
-//CURRENT_PRINCIPAL       : C U R R E N T '_' P R I N C I P A L;
-//CURRENT_ROLES           : C U R R E N T '_' R O L E S;
-//CURRENT_TENANT          : C U R R E N T '_' T E N A N T;
+CURRENT_PRINCIPAL       : C U R R E N T '_' P R I N C I P A L;
+CURRENT_ROLES           : C U R R E N T '_' R O L E S;
+CURRENT_TENANT          : C U R R E N T '_' T E N A N T;
 GRANT                   : G R A N T;
 IS_ACCESSIBLE_NOCACHE   : I S '_' A C C E S S I B L E '_' N O C A C H E;
 IS_ACCESSIBLE_NODB      : I S '_' A C C E S S I B L E '_' N O D B;
 QUERY_OPTIMIZE_NOCACHE  : Q U E R Y '_' O P T I M I Z E '_' N O C A C H E;
 READ                    : R E A D;
 TO                      : T O;
-
-DATE_LITERAL
-    : LEFT_BRACKET ('d') (' ' | '\t')+ '\'' DATE_STRING '\'' (' ' | '\t')* RIGHT_BRACKET
-    ;
-
-TIME_LITERAL
-    : LEFT_BRACKET ('t') (' ' | '\t')+ '\'' TIME_STRING '\'' (' ' | '\t')* RIGHT_BRACKET
-    ;
-
-TIMESTAMP_LITERAL
-    : LEFT_BRACE ('ts') (' ' | '\t')+ '\'' DATE_STRING ' ' TIME_STRING '\'' (' ' | '\t')* RIGHT_BRACKET
-    ;
 
 DATE_STRING
     : '0'..'9' '0'..'9' '0'..'9' '0'..'9' '-' ('0' '1'..'9' | '1' '0'..'2') '-' '0'..'3' '0'..'9'
@@ -262,6 +252,18 @@ DATE_STRING
 TIME_STRING
     : ('0'..'2')? '0'..'9'? COLON '0'..'5' '0'..'9' COLON '0'..'5' '0'..'9' DOT '0'..'9'*
     ;
+
+TIMESTAMP_LITERAL
+	: TIME_ESCAPE_START (' ' | '\t')+ '\'' DATE_STRING ' ' TIME_STRING '\'' (' ' | '\t')* RIGHT_BRACE
+	;
+
+DATE_LITERAL
+	: DATE_ESCAPE_START (' ' | '\t')+ '\'' DATE_STRING '\'' (' ' | '\t')* RIGHT_BRACE
+	;
+
+TIME_LITERAL
+	: TIME_ESCAPE_START (' ' | '\t')+ '\'' TIME_STRING '\'' (' ' | '\t')* RIGHT_BRACE
+	;
 
 // End JPA Security customizations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -274,4 +276,3 @@ IDENTIFIER
 QUOTED_IDENTIFIER
 	:	'`' ( ESCAPE_SEQUENCE | ~('\\'|'`') )* '`'
 	;
-

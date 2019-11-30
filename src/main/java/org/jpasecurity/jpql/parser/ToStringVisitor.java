@@ -33,8 +33,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     private static final char RIGHT_PAREN = ')';
     private static final char SPACE = ' ';
     private static final String COMMA = ", ";
-
-    private final StringBuilder sb;
+    private static final String HINT_START = "/*";
+    private static final String HINT_END = "*/";
 
     public ToStringVisitor() {
         this(new StringBuilder());
@@ -43,7 +43,6 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     public ToStringVisitor(StringBuilder stringBuilder) {
         super(Objects.requireNonNull(stringBuilder,
                 "A non null instance of StringBuilder is required in order to render the HQL query"));
-        this.sb = stringBuilder;
     }
 
     public String toJqplString(BaseContext ctx) {
@@ -59,21 +58,23 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         prependSpaceAndVisit(ctx.DELETE());
         prependSpaceAndVisit(ctx.ACCESS());
         prependSpaceAndVisit(ctx.TO());
-        prependSpaceAndVisit(ctx.mainEntityPersisterReference());
-        return prependSpaceAndVisit(ctx.whereClause());
+        prependSpaceAndVisit(ctx.pathRoot());
+        prependSpaceAndVisit(ctx.whereClause());
+        return defaultResult();
     }
 
     @Override
-    public StringBuilder visitMainEntityPersisterReference(JpqlParser.MainEntityPersisterReferenceContext ctx) {
-        visit(ctx.simplePathQualifier());
-        return prependSpaceAndVisit(ctx.identificationVariableDef());
+    public StringBuilder visitEntityName(JpqlParser.EntityNameContext ctx) {
+        defaultResult().append(ctx.fullEntityName);
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitIdentificationVariableDef(JpqlParser.IdentificationVariableDefContext ctx) {
         if (ctx.AS() != null) {
             visit(ctx.AS());
-            return prependSpaceAndVisit(ctx.identificationVariable());
+            prependSpaceAndVisit(ctx.identificationVariable());
+            return defaultResult();
         }
         return visit(ctx.IDENTIFIER());
     }
@@ -81,7 +82,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     @Override
     public StringBuilder visitSelectStatement(JpqlParser.SelectStatementContext ctx) {
         visit(ctx.querySpec());
-        return prependSpaceAndVisit(ctx.orderByClause());
+        prependSpaceAndVisit(ctx.orderByClause());
+        return defaultResult();
     }
 
     @Override
@@ -90,7 +92,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         prependSpaceAndVisit(ctx.fromClause());
         prependSpaceAndVisit(ctx.whereClause());
         prependSpaceAndVisit(ctx.groupByClause());
-        return prependSpaceAndVisit(ctx.havingClause());
+        prependSpaceAndVisit(ctx.havingClause());
+        return defaultResult();
     }
 
     @Override
@@ -98,21 +101,32 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.SELECT());
         prependSpaceAndVisit(ctx.hintStatement());
         prependSpaceAndVisit(ctx.DISTINCT());
-        return prependSpaceAndVisit(ctx.selectionList());
+        prependSpaceAndVisit(ctx.selectionList());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitSelectionList(JpqlParser.SelectionListContext ctx) {
-        visit(ctx.selection(0));
-
-        if (ctx.selection().size() > 1) {
-            for (int i = 1; i < ctx.selection().size(); i++) {
-                sb.append(COMMA);
-                visit(ctx.selection(i));
+        int i = 0;
+        for (JpqlParser.SelectionContext selection : ctx.selection()) {
+            if (i > 0) {
+                defaultResult().append(COMMA);
             }
+            visit(selection);
+            i++;
         }
 
         return defaultResult();
+    }
+
+    @Override
+    public StringBuilder visitHintStatement(JpqlParser.HintStatementContext ctx) {
+        defaultResult().append(HINT_START);
+        for (JpqlParser.HintValueContext hintValue : ctx.hintValue()) {
+            prependSpaceAndVisit(hintValue);
+        }
+        defaultResult().append(SPACE).append(HINT_END);
+        return super.visitHintStatement(ctx);
     }
 
     @Override
@@ -126,9 +140,10 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     public StringBuilder visitUpdateStatement(JpqlParser.UpdateStatementContext ctx) {
         visit(ctx.UPDATE());
         prependSpaceAndVisit(ctx.FROM());
-        prependSpaceAndVisit(ctx.mainEntityPersisterReference());
+        prependSpaceAndVisit(ctx.pathRoot());
         prependSpaceAndVisit(ctx.setClause());
-        return prependSpaceAndVisit(ctx.whereClause());
+        prependSpaceAndVisit(ctx.whereClause());
+        return defaultResult();
     }
 
     @Override
@@ -136,7 +151,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.SET());
         prependSpaceAndVisit(ctx.assignment(0));
         for (int i = 1; i < ctx.assignment().size(); i++) {
-            sb.append(COMMA);
+            defaultResult().append(COMMA);
             visit(ctx.assignment(i));
         }
         return defaultResult();
@@ -151,8 +166,9 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     public StringBuilder visitDeleteStatement(JpqlParser.DeleteStatementContext ctx) {
         visit(ctx.DELETE());
         prependSpaceAndVisit(ctx.FROM());
-        prependSpaceAndVisit(ctx.mainEntityPersisterReference());
-        return prependSpaceAndVisit(ctx.whereClause());
+        prependSpaceAndVisit(ctx.pathRoot());
+        prependSpaceAndVisit(ctx.whereClause());
+        return defaultResult();
     }
 
     @Override
@@ -161,7 +177,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         prependSpaceAndVisit(ctx.BY());
         prependSpaceAndVisit(ctx.sortSpecification(0));
         for (int i = 1; i < ctx.sortSpecification().size(); i++) {
-            sb.append(COMMA);
+            defaultResult().append(COMMA);
             visit(ctx.sortSpecification(i));
         }
         return defaultResult();
@@ -169,8 +185,9 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
 
     @Override
     public StringBuilder visitSortSpecification(JpqlParser.SortSpecificationContext ctx) {
-        visit(ctx.expression());
-        return prependSpaceAndVisit(ctx.orderingSpecification());
+        visit(ctx.sortExpression());
+        prependSpaceAndVisit(ctx.orderingSpecification());
+        return defaultResult();
     }
 
     @Override
@@ -178,16 +195,17 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.FROM());
         prependSpaceAndVisit(ctx.fromElementSpace(0));
         for (int i = 1; i < ctx.fromElementSpace().size(); i++) {
-            sb.append(COMMA);
+            defaultResult().append(COMMA);
             visit(ctx.fromElementSpace(i));
         }
-        return sb;
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitWhereClause(JpqlParser.WhereClauseContext ctx) {
         visit(ctx.WHERE());
-        return prependSpaceAndVisit(ctx.predicate());
+        prependSpaceAndVisit(ctx.predicate());
+        return defaultResult();
     }
 
     @Override
@@ -195,7 +213,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.expression());
         prependSpaceAndVisit(ctx.IS());
         prependSpaceAndVisit(ctx.NOT());
-        return prependSpaceAndVisit(ctx.NULL());
+        prependSpaceAndVisit(ctx.NULL());
+        return defaultResult();
     }
 
     @Override
@@ -203,7 +222,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.expression());
         prependSpaceAndVisit(ctx.IS());
         prependSpaceAndVisit(ctx.NOT());
-        return prependSpaceAndVisit(ctx.EMPTY());
+        prependSpaceAndVisit(ctx.EMPTY());
+        return defaultResult();
     }
 
     @Override
@@ -249,7 +269,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     @Override
     public StringBuilder visitNegatedPredicate(JpqlParser.NegatedPredicateContext ctx) {
         visit(ctx.NOT());
-        return prependSpaceAndVisit(ctx.predicate());
+        prependSpaceAndVisit(ctx.predicate());
+        return defaultResult();
     }
 
     @Override
@@ -283,7 +304,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     public StringBuilder visitGroupingSpecification(JpqlParser.GroupingSpecificationContext ctx) {
         prependSpaceAndVisit(ctx.groupingValue(0));
         for (int i = 1; i < ctx.groupingValue().size(); i++) {
-            sb.append(COMMA);
+            defaultResult().append(COMMA);
             visit((ctx.groupingValue(i)));
         }
         return defaultResult();
@@ -292,56 +313,63 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     @Override
     public StringBuilder visitHavingClause(JpqlParser.HavingClauseContext ctx) {
         visit(ctx.HAVING());
-        return prependSpaceAndVisit(ctx.predicate());
+        prependSpaceAndVisit(ctx.predicate());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitJpaCollectionJoin(JpqlParser.JpaCollectionJoinContext ctx) {
-        sb.append(COMMA);
+        defaultResult().append(COMMA);
         visit(ctx.IN());
-        sb.append(LEFT_PAREN);
+        defaultResult().append(LEFT_PAREN);
         visit(ctx.path());
-        sb.append(RIGHT_PAREN);
-        return prependSpaceAndVisit(ctx.identificationVariableDef());
+        defaultResult().append(RIGHT_PAREN);
+        prependSpaceAndVisit(ctx.identificationVariableDef());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitQualifiedJoin(JpqlParser.QualifiedJoinContext ctx) {
         prependSpaceAndVisit(ctx.INNER());
         prependSpaceAndVisit(ctx.LEFT());
+        prependSpaceAndVisit(ctx.RIGHT());
         prependSpaceAndVisit(ctx.OUTER());
         prependSpaceAndVisit(ctx.JOIN());
         prependSpaceAndVisit(ctx.FETCH());
         prependSpaceAndVisit(ctx.path());
         prependSpaceAndVisit(ctx.identificationVariableDef());
-        return prependSpaceAndVisit(ctx.qualifiedJoinPredicate());
+        prependSpaceAndVisit(ctx.qualifiedJoinPredicate());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitQualifiedJoinPredicate(JpqlParser.QualifiedJoinPredicateContext ctx) {
         visit(ctx.ON());
-        return prependSpaceAndVisit(ctx.predicate());
+        prependSpaceAndVisit(ctx.predicate());
+        return defaultResult();
     }
 
     @Override
-    public StringBuilder visitTreatedPathRoot(JpqlParser.TreatedPathRootContext ctx) {
+    public StringBuilder visitTreatedNavigablePath(JpqlParser.TreatedNavigablePathContext ctx) {
         visit(ctx.TREAT()).append(LEFT_PAREN);
-        visit(ctx.dotIdentifierSequence(0));
+        visit(ctx.path());
         prependSpaceAndVisit(ctx.AS());
-        prependSpaceAndVisit(ctx.dotIdentifierSequence(1));
-        return sb.append(RIGHT_PAREN);
+        prependSpaceAndVisit(ctx.dotIdentifierSequence());
+        defaultResult().append(RIGHT_PAREN);
+        visitOptionalToken(ctx.pathContinuation());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitCoalesce(JpqlParser.CoalesceContext ctx) {
         visit(ctx.COALESCE());
-        sb.append(LEFT_PAREN);
+        defaultResult().append(LEFT_PAREN);
         visit(ctx.expression(0));
         for (int i = 1; i < ctx.expression().size(); i++) {
-            sb.append(COMMA);
+            defaultResult().append(COMMA);
             visit(ctx.expression(i));
         }
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
@@ -351,7 +379,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         prependSpaceAndVisit(ctx.BETWEEN());
         prependSpaceAndVisit(ctx.expression(1));
         prependSpaceAndVisit(ctx.AND());
-        return prependSpaceAndVisit(ctx.expression(2));
+        prependSpaceAndVisit(ctx.expression(2));
+        return defaultResult();
     }
 
     @Override
@@ -359,22 +388,23 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.expression());
         prependSpaceAndVisit(ctx.NOT());
         prependSpaceAndVisit(ctx.IN());
-        return prependSpaceAndVisit(ctx.inList());
+        prependSpaceAndVisit(ctx.inList());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitExistsPredicate(JpqlParser.ExistsPredicateContext ctx) {
         visit(ctx.EXISTS());
-        sb.append(SPACE).append(LEFT_PAREN);
+        defaultResult().append(SPACE).append(LEFT_PAREN);
         visit(ctx.querySpec());
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
     public StringBuilder visitAllOrAnyExpression(JpqlParser.AllOrAnyExpressionContext ctx) {
-        sb.append(ctx.op.getText()).append(SPACE).append(LEFT_PAREN);
+        defaultResult().append(ctx.op.getText()).append(SPACE).append(LEFT_PAREN);
         visit(ctx.querySpec());
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
@@ -383,24 +413,25 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         prependSpaceAndVisit(ctx.NOT());
         prependSpaceAndVisit(ctx.LIKE());
         prependSpaceAndVisit(ctx.expression(1));
-        return prependSpaceAndVisit(ctx.likeEscape());
+        prependSpaceAndVisit(ctx.likeEscape());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitConstructorExpression(JpqlParser.ConstructorExpressionContext ctx) {
         visit(ctx.NEW());
-        sb.append(SPACE);
+        defaultResult().append(SPACE);
         visit(ctx.dotIdentifierSequence());
-        sb.append(LEFT_PAREN);
+        defaultResult().append(LEFT_PAREN);
         visit(ctx.constructorParameters());
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
     public StringBuilder visitConstructorParameters(JpqlParser.ConstructorParametersContext ctx) {
         visit(ctx.constructionParameter(0));
         for (int i = 1; i < ctx.constructionParameter().size(); i++) {
-            sb.append(COMMA);
+            defaultResult().append(COMMA);
             visit(ctx.constructionParameter(i));
         }
         return defaultResult();
@@ -414,7 +445,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
             prependSpaceAndVisit(ctx.simpleCaseWhen(i));
         }
         prependSpaceAndVisit(ctx.caseOtherwise());
-        return prependSpaceAndVisit(ctx.END());
+        prependSpaceAndVisit(ctx.END());
+        return defaultResult();
     }
 
     @Override
@@ -422,13 +454,15 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.WHEN());
         prependSpaceAndVisit(ctx.expression(0));
         prependSpaceAndVisit(ctx.THEN());
-        return prependSpaceAndVisit(ctx.expression(1));
+        prependSpaceAndVisit(ctx.expression(1));
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitCaseOtherwise(JpqlParser.CaseOtherwiseContext ctx) {
         visit(ctx.ELSE());
-        return prependSpaceAndVisit(ctx.expression());
+        prependSpaceAndVisit(ctx.expression());
+        return defaultResult();
     }
 
     @Override
@@ -438,7 +472,8 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
             prependSpaceAndVisit(ctx.searchedCaseWhen(i));
         }
         prependSpaceAndVisit(ctx.caseOtherwise());
-        return prependSpaceAndVisit(ctx.END());
+        prependSpaceAndVisit(ctx.END());
+        return defaultResult();
     }
 
     @Override
@@ -446,22 +481,22 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.WHEN());
         prependSpaceAndVisit(ctx.predicate());
         prependSpaceAndVisit(ctx.THEN());
-        return prependSpaceAndVisit(ctx.expression());
+        prependSpaceAndVisit(ctx.expression());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitMemberOfPredicate(JpqlParser.MemberOfPredicateContext ctx) {
-        visit(ctx.expression());
-        prependSpaceAndVisit(ctx.NOT());
         prependSpaceAndVisit(ctx.MEMBER());
         prependSpaceAndVisit(ctx.OF());
-        return prependSpaceAndVisit(ctx.path());
+        prependSpaceAndVisit(ctx.path());
+        return defaultResult();
     }
 
     @Override
     public StringBuilder visitTrimFunction(JpqlParser.TrimFunctionContext ctx) {
         visit(ctx.TRIM());
-        sb.append(LEFT_PAREN);
+        defaultResult().append(LEFT_PAREN);
         if (ctx.trimSpecification() != null) {
             visitAndAppendSpace(ctx.trimSpecification());
         }
@@ -472,7 +507,7 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
             visitAndAppendSpace(ctx.FROM());
         }
         visit(ctx.expression());
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
@@ -504,17 +539,17 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     @Override
     public StringBuilder visitEntityTypeReference(JpqlParser.EntityTypeReferenceContext ctx) {
         visit(ctx.TYPE());
-        sb.append(LEFT_PAREN);
+        defaultResult().append(LEFT_PAREN);
         visitOptionalToken(ctx.entityLiteralReference());
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
     public StringBuilder visitTypeEqualityPredicate(JpqlParser.TypeEqualityPredicateContext ctx) {
         visit(ctx.entityTypeReference());
-        prependSpaceAndVisit(ctx.EQUAL());
-        prependSpaceAndVisit(ctx.NOT_EQUAL());
-        return prependSpaceAndVisit(ctx.dotParam());
+        defaultResult().append(SPACE).append(ctx.op.getText());
+        prependSpaceAndVisit(ctx.entityParam());
+        return defaultResult();
     }
 
     @Override
@@ -522,15 +557,16 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         visit(ctx.entityTypeReference());
         prependSpaceAndVisit(ctx.NOT());
         prependSpaceAndVisit(ctx.IN());
-        sb.append(LEFT_PAREN);
-        visit(ctx.dotParamList());
-        return sb.append(RIGHT_PAREN);
+        defaultResult().append(LEFT_PAREN);
+        visit(ctx.entityParam());
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
     public StringBuilder visitLikeEscape(JpqlParser.LikeEscapeContext ctx) {
         visit(ctx.ESCAPE());
-        return prependSpaceAndVisit(ctx.expression());
+        prependSpaceAndVisit(ctx.expression());
+        return defaultResult();
     }
 
     @Override
@@ -548,23 +584,74 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
     @Override
     public StringBuilder visitJpaNonStandardFunction(JpqlParser.JpaNonStandardFunctionContext ctx) {
         visit(ctx.FUNCTION());
-        sb.append(LEFT_PAREN);
-        visit(ctx.nonStandardFunctionName());
-        sb.append(COMMA);
+        defaultResult().append(LEFT_PAREN);
+        visit(ctx.jpaNonStandardFunctionName());
+        defaultResult().append(COMMA);
         visit(ctx.nonStandardFunctionArguments());
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 
     @Override
     public StringBuilder visitUnaryMinusExpression(JpqlParser.UnaryMinusExpressionContext ctx) {
-        sb.append("-");
+        defaultResult().append("-");
         return visit(ctx.expression());
     }
 
     @Override
     public StringBuilder visitUnaryPlusExpression(JpqlParser.UnaryPlusExpressionContext ctx) {
-        sb.append("+");
+        defaultResult().append("+");
         return visit(ctx.expression());
+    }
+
+    @Override
+    public StringBuilder visitPathRoot(JpqlParser.PathRootContext ctx) {
+        visit(ctx.entityName());
+        prependSpaceAndVisit(ctx.identificationVariableDef());
+        return defaultResult();
+    }
+
+    @Override
+    public StringBuilder visitMapEntrySelection(JpqlParser.MapEntrySelectionContext ctx) {
+        visit(ctx.ENTRY());
+        defaultResult().append(LEFT_PAREN);
+        visit(ctx.path());
+        return defaultResult().append(RIGHT_PAREN);
+    }
+
+    @Override
+    public StringBuilder visitSelectExpression(JpqlParser.SelectExpressionContext ctx) {
+        visitOptionalToken(ctx.constructorExpression());
+        visitOptionalToken(ctx.expression());
+        visitOptionalToken(ctx.jpaSelectObjectSyntax());
+        visitOptionalToken(ctx.mapEntrySelection());
+        return defaultResult();
+    }
+
+    @Override
+    public StringBuilder visitJpaNonStandardFunctionPredicate(JpqlParser.JpaNonStandardFunctionPredicateContext ctx) {
+        return super.visitJpaNonStandardFunctionPredicate(ctx);
+    }
+
+    @Override
+    public StringBuilder visitGroupedPredicate(JpqlParser.GroupedPredicateContext ctx) {
+        defaultResult().append(LEFT_PAREN);
+        visit(ctx.predicate());
+        return defaultResult().append(RIGHT_PAREN);
+    }
+
+    @Override
+    public StringBuilder visitJpaNonStandardFunctionName(JpqlParser.JpaNonStandardFunctionNameContext ctx) {
+        return super.visitJpaNonStandardFunctionName(ctx);
+    }
+
+    @Override
+    public StringBuilder visitNonStandardFunctionArguments(JpqlParser.NonStandardFunctionArgumentsContext ctx) {
+        return super.visitNonStandardFunctionArguments(ctx);
+    }
+
+    @Override
+    public StringBuilder visitStandardFunction(JpqlParser.StandardFunctionContext ctx) {
+        return super.visitStandardFunction(ctx);
     }
 
     @Override
@@ -572,9 +659,9 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
         if (node.getSymbol().getType() == JpqlParser.EOF) {
             return defaultResult();
         } else if (node.getSymbol().getType() == JpqlParser.COMMA) {
-            return sb.append(COMMA);
+            return defaultResult().append(COMMA);
         }
-        return sb.append(node.getText());
+        return defaultResult().append(node.getText());
     }
 
     private StringBuilder visitAssignmentLikeExpression(ParserRuleContext lhs,
@@ -582,35 +669,36 @@ public class ToStringVisitor extends JpqlVisitorAdapter<StringBuilder> {
                                                         ParserRuleContext rhs) {
         visit(lhs);
         prependSpaceAndVisit(terminalNode);
-        return prependSpaceAndVisit(rhs);
+        prependSpaceAndVisit(rhs);
+        return defaultResult();
     }
 
-    private StringBuilder visitAndAppendSpace(ParseTree ctx) {
+    private void visitAndAppendSpace(ParseTree ctx) {
         if (ctx == null) {
-            return sb;
+            return;
         }
         visit(ctx);
-        return sb.append(SPACE);
+        defaultResult().append(SPACE);
     }
 
-    private StringBuilder prependSpaceAndVisit(ParseTree ctx) {
+    private void prependSpaceAndVisit(ParseTree ctx) {
         if (ctx == null) {
-            return sb;
+            return;
         }
-        sb.append(SPACE);
-        return visit(ctx);
+        defaultResult().append(SPACE);
+        visit(ctx);
     }
 
     private StringBuilder visitSingleDistinctArgumentFunction(TerminalNode functionName,
                                                               ParseTree distinctNode,
                                                               ParseTree argument) {
-        sb.append(functionName.getText()).append(LEFT_PAREN);
+        defaultResult().append(functionName.getText()).append(LEFT_PAREN);
         visitOptionalToken(distinctNode);
         if (distinctNode != null) {
             prependSpaceAndVisit(argument);
         } else {
             visit(argument);
         }
-        return sb.append(RIGHT_PAREN);
+        return defaultResult().append(RIGHT_PAREN);
     }
 }

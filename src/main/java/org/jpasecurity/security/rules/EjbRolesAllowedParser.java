@@ -17,10 +17,10 @@ package org.jpasecurity.security.rules;
 
 import org.jpasecurity.util.AbstractAnnotationParser;
 
-import javax.annotation.security.RolesAllowed;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import javax.annotation.security.RolesAllowed;
 
 /**
  * @author Arne Limburg

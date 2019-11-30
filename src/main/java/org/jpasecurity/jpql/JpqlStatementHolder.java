@@ -34,7 +34,7 @@ public class JpqlStatementHolder implements Cloneable {
     private ParserRuleContext statement;
     private BaseContext fromClause;
     private JpqlParser.WhereClauseContext whereClause;
-    private List<JpqlParser.SimplePathQualifierContext> whereClausePaths;
+    private List<JpqlParser.EntityNameContext> whereClausePaths;
 
     public JpqlStatementHolder(ParserRuleContext statement) {
         this.statement = statement;
@@ -61,12 +61,12 @@ public class JpqlStatementHolder implements Cloneable {
         return this.whereClause;
     }
 
-    public List<JpqlParser.SimplePathQualifierContext> getWhereClausePaths() {
+    public List<JpqlParser.EntityNameContext> getWhereClausePaths() {
         if (this.whereClausePaths == null) {
             JpqlParser.WhereClauseContext whereClause = getWhereClause();
             if (whereClause != null) {
                 PathVisitor visitor = new PathVisitor();
-                this.whereClausePaths = Collections.unmodifiableList(visitor.visit(whereClause));
+                this.whereClausePaths = Collections.unmodifiableList(visitor.visit(whereClause.predicate()));
             }
         }
         return this.whereClausePaths;
@@ -106,13 +106,13 @@ public class JpqlStatementHolder implements Cloneable {
 
         @Override
         public ValueHolder<BaseContext> visitUpdateStatement(JpqlParser.UpdateStatementContext ctx) {
-            defaultResult().setValue(ctx.mainEntityPersisterReference());
+            defaultResult().setValue(ctx.pathRoot());
             return stopVisitingChildren();
         }
 
         @Override
         public ValueHolder<BaseContext> visitDeleteStatement(JpqlParser.DeleteStatementContext ctx) {
-            defaultResult().setValue(ctx.mainEntityPersisterReference());
+            defaultResult().setValue(ctx.pathRoot());
             return stopVisitingChildren();
         }
     }
@@ -126,16 +126,15 @@ public class JpqlStatementHolder implements Cloneable {
         }
     }
 
-    private static class PathVisitor extends JpqlVisitorAdapter<List<JpqlParser.SimplePathQualifierContext>> {
+    private static class PathVisitor extends JpqlVisitorAdapter<List<JpqlParser.EntityNameContext>> {
 
         PathVisitor() {
-            super(new ArrayList<JpqlParser.SimplePathQualifierContext>());
+            super(new ArrayList<JpqlParser.EntityNameContext>());
         }
 
         @Override
-        public List<JpqlParser.SimplePathQualifierContext> visitSimplePathQualifier(
-                JpqlParser.SimplePathQualifierContext ctx) {
-            defaultResult().add(ctx);
+        public List<JpqlParser.EntityNameContext> visitPathRoot(JpqlParser.PathRootContext ctx) {
+            defaultResult().add(ctx.entityName());
             return defaultResult();
         }
     }

@@ -28,8 +28,6 @@ import org.jpasecurity.jpql.compiler.QueryEvaluationParameters;
 import org.jpasecurity.jpql.compiler.QueryEvaluator;
 import org.jpasecurity.jpql.compiler.QueryPreparator;
 import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.JpqlParser.LiteralExpressionContext;
-import org.jpasecurity.jpql.parser.JpqlParsingHelper;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
 
 /**

@@ -52,7 +52,7 @@ public class ToJpqlStringVisitorTest {
         assertJpql("SELECT bean FROM TestBean bean WHERE NOT EXISTS"
                         + " (SELECT bean FROM TestBean bean WHERE bean.id = :id)",
             "SELECT bean FROM TestBean bean WHERE NOT EXISTS"
-                    + " (SELECT /* QUERY_OPTIMIZE_NOCACHE IS_ACCESSIBLE_NODB IS_ACCESSIBLE_NOCACHE*/ bean"
+                    + " (SELECT /* QUERY_OPTIMIZE_NOCACHE IS_ACCESSIBLE_NODB IS_ACCESSIBLE_NOCACHE */ bean"
                     + " FROM TestBean bean WHERE bean.id = :id)");
     }
 

@@ -105,19 +105,19 @@ public class AccessRule extends JpqlCompiledStatement {
     }
 
     public boolean grantsCreateAccess() {
-        return getAccess().contains(AccessType.CREATE);
+        return grantsAccess(AccessType.CREATE);
     }
 
     public boolean grantsReadAccess() {
-        return getAccess().contains(AccessType.READ);
+        return grantsAccess(AccessType.READ);
     }
 
     public boolean grantsUpdateAccess() {
-        return getAccess().contains(AccessType.UPDATE);
+        return grantsAccess(AccessType.UPDATE);
     }
 
     public boolean grantsDeleteAccess() {
-        return getAccess().contains(AccessType.DELETE);
+        return grantsAccess(AccessType.DELETE);
     }
 
     public boolean grantsAccess(AccessType type) {
@@ -184,7 +184,15 @@ public class AccessRule extends JpqlCompiledStatement {
         }
 
         @Override
-        public Set<Alias> visitSimplePath(JpqlParser.SimplePathContext ctx) {
+        public Set<Alias> visitEntityName(JpqlParser.EntityNameContext ctx) {
+            if (ctx.getChildCount() == 2) {
+                defaultResult().add(new Alias(ctx.getChild(1).getText().toLowerCase()));
+            }
+            return stopVisitingChildren();
+        }
+
+        @Override
+        public Set<Alias> visitDotIdentifierSequence(JpqlParser.DotIdentifierSequenceContext ctx) {
             if (ctx.getChildCount() == 2) {
                 defaultResult().add(new Alias(ctx.getChild(1).getText().toLowerCase()));
             }

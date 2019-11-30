@@ -150,12 +150,13 @@ public class EntityFilter implements AccessManager {
             if (!(condition instanceof JpqlParser.GroupedPredicateContext)) {
                 condition = QueryPreparator.createBrackets(condition);
             }
-            JpqlParser.AndPredicateContext and = QueryPreparator.createAnd(condition, accessDefinition.getAccessRules());
+            JpqlParser.AndPredicateContext and =
+                    QueryPreparator.createAnd(condition, accessDefinition.getAccessRules());
             and.setParent(where);
             TreeRewriteSupport.setChild(where, 0, and);
         }
 
-        BaseContext statementNode = (BaseContext) statement.getStatement();
+        BaseContext statementNode = (BaseContext)statement.getStatement();
         LOG.debug("Optimizing filtered query: {}", statementNode.toJpqlString());
 
         optimize(accessDefinition);
@@ -407,7 +408,8 @@ public class EntityFilter implements AccessManager {
                 for (JpqlParser.IdentificationVariableContext identifier: accessRule
                         .getIdentificationVariableNodes(alias)) {
                     ParserRuleContext nodeToReplace = identifier;
-                    if (nodeToReplace.getParent() instanceof JpqlParser.SimplePathContext) {
+                    if (nodeToReplace.getParent() instanceof JpqlParser.DotIdentifierSequenceContext
+                            || nodeToReplace.getParent() instanceof JpqlParser.EntityNameContext) {
                         nodeToReplace = nodeToReplace.getParent();
                     }
                     TreeRewriteSupport.replace(nodeToReplace, queryPreparator.createNamedParameter(alias.getName()));
@@ -569,9 +571,9 @@ public class EntityFilter implements AccessManager {
     }
 
     private JpqlParser.InequalityPredicateContext createOneNotEqualsOne() {
-        JpqlParser.LiteralExpressionContext numberExpression1 = (JpqlParser.LiteralExpressionContext) JpqlParsingHelper
+        JpqlParser.LiteralExpressionContext numberExpression1 = (JpqlParser.LiteralExpressionContext)JpqlParsingHelper
                 .createParser("1").expression();
-        JpqlParser.LiteralExpressionContext numberExpression2 = (JpqlParser.LiteralExpressionContext) JpqlParsingHelper
+        JpqlParser.LiteralExpressionContext numberExpression2 = (JpqlParser.LiteralExpressionContext)JpqlParsingHelper
                 .createParser("1").expression();
         return QueryPreparator.createNotEquals(numberExpression1, numberExpression2);
     }

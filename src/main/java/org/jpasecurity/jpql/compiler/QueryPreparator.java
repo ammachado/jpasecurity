@@ -138,9 +138,9 @@ public class QueryPreparator {
     }
 
     /**
-     * Creates a <tt>JpqlParser.MapKeyPathRootContext</tt> node.
+     * Creates a <tt>JpqlParser.MapKeyNavigablePathContext</tt> node.
      */
-    public JpqlParser.MapKeyPathRootContext createKey(BaseContext child) {
+    public JpqlParser.MapKeyNavigablePathContext createKey(BaseContext child) {
         throw new UnsupportedOperationException();
         /*
         JpqlKey key = new JpqlKey(JpqlParserTreeConstants.JJTKEY);
@@ -153,7 +153,7 @@ public class QueryPreparator {
     /**
      * Creates a <tt>JpqlParser.CollectionValuePathRootContext</tt> node.
      */
-    public JpqlParser.CollectionValuePathRootContext createValue(BaseContext child) {
+    public JpqlParser.CollectionElementNavigablePathContext createValue(BaseContext child) {
         throw new UnsupportedOperationException();
         /*
         JpqlValue value = new JpqlValue(JpqlParserTreeConstants.JJTVALUE);
@@ -327,7 +327,7 @@ public class QueryPreparator {
     /**
      * Creates a <tt>JpqlPath</tt> BaseContext for the specified string.
      */
-    public JpqlParser.CollectionReferenceContext createCollectionValuedPath(JpqlParser.PathContext path) {
+    public JpqlParser.CollectionElementNavigablePathContext createCollectionValuedPath(JpqlParser.PathContext path) {
         throw new UnsupportedOperationException();
         /*
         BaseContext clonedPath = path.clone();
@@ -391,7 +391,7 @@ public class QueryPreparator {
         */
     }
 
-    public JpqlParser.FromElementSpaceRootContext createFromItem(Alias type, Alias alias) {
+    public JpqlParser.FromElementSpaceContext createFromItem(Alias type, Alias alias) {
         throw new UnsupportedOperationException();
         /*
         JpqlAbstractSchemaName schemaName = new JpqlParser.AbstractSchemaName(JpqlParserTreeConstants.aBSTRACTSCHEMANAME);
@@ -510,30 +510,25 @@ public class QueryPreparator {
         }
 
         @Override
-        public ReplaceParameters visitSimplePath(JpqlParser.SimplePathContext ctx) {
-            if (canReplace(ctx.simplePathQualifier(), defaultResult())) {
-                replace(ctx.simplePathQualifier(), defaultResult());
+        public ReplaceParameters visitPathRoot(JpqlParser.PathRootContext ctx) {
+            if (canReplace(ctx.entityName(), defaultResult())) {
+                replace(ctx.entityName(), defaultResult());
             }
             return stopVisitingChildren();
         }
 
         @Override
-        public ReplaceParameters visitMapEntryPath(JpqlParser.MapEntryPathContext ctx) {
-            visit(ctx.mapReference());
+        public ReplaceParameters visitMapEntrySelection(JpqlParser.MapEntrySelectionContext ctx) {
+            visit(ctx.path());
             return stopVisitingChildren();
         }
 
         @Override
-        public ReplaceParameters visitIndexedPath(JpqlParser.IndexedPathContext ctx) {
+        public ReplaceParameters visitSyntacticDomainPath(JpqlParser.SyntacticDomainPathContext ctx) {
             throw new UnsupportedOperationException();
         }
 
-        @Override
-        public ReplaceParameters visitCompoundPath(JpqlParser.CompoundPathContext ctx) {
-            throw new UnsupportedOperationException();
-        }
-
-        private boolean canReplace(JpqlParser.SimplePathQualifierContext path, ReplaceParameters parameters) {
+        private boolean canReplace(JpqlParser.EntityNameContext path, ReplaceParameters parameters) {
             Path oldPath = parameters.getOldPath();
             if (path.getChildCount() <= oldPath.getSubpathComponents().length) {
                 return false;
@@ -550,7 +545,7 @@ public class QueryPreparator {
             return true;
         }
 
-        private void replace(JpqlParser.SimplePathQualifierContext path, ReplaceParameters parameters) {
+        private void replace(JpqlParser.EntityNameContext path, ReplaceParameters parameters) {
             StringBuilder pathParts = new StringBuilder();
             for (int i = 0; i < path.getChildCount(); i++) {
                 ParseTree child = path.getChild(i);

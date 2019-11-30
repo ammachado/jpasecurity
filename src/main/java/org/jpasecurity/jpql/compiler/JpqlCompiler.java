@@ -38,10 +38,6 @@ import org.jpasecurity.jpql.TreeRewriteSupport;
 import org.jpasecurity.jpql.Trees;
 import org.jpasecurity.jpql.TypeDefinition;
 import org.jpasecurity.jpql.parser.JpqlParser;
-import org.jpasecurity.jpql.parser.JpqlParser.CollectionValuePathRootContext;
-import org.jpasecurity.jpql.parser.JpqlParser.MainEntityPersisterReferenceContext;
-import org.jpasecurity.jpql.parser.JpqlParser.MapEntryPathContext;
-import org.jpasecurity.jpql.parser.JpqlParser.MapKeyPathRootContext;
 import org.jpasecurity.jpql.parser.JpqlValueHolderVisitor;
 import org.jpasecurity.jpql.parser.JpqlVisitorAdapter;
 import org.jpasecurity.persistence.mapping.ManagedTypeFilter;
@@ -148,15 +144,17 @@ public class JpqlCompiler {
         }
     }
 
-    private static Alias getAlias(BaseContext ctx) {
-        if (ctx instanceof JpqlParser.MainEntityPersisterReferenceContext) {
-            JpqlParser.MainEntityPersisterReferenceContext context = (JpqlParser.MainEntityPersisterReferenceContext)ctx;
+    private Alias getAlias(BaseContext ctx) {
+        if (ctx instanceof JpqlParser.PathRootContext) {
+            JpqlParser.PathRootContext context = (JpqlParser.PathRootContext)ctx;
             if (context.identificationVariableDef() == null) {
-                throw new PersistenceException("Missing alias for type " + context.simplePathQualifier().toJpqlString());
+                throw new PersistenceException(
+                        "Missing alias for type " + context.entityName().toJpqlString());
             }
             return new Alias(context.identificationVariableDef().getText());
         }
-        throw new PersistenceException("Missing alias for type " + ((BaseContext)ctx.getChild(0)).toJpqlString());
+        throw new PersistenceException(
+                "Missing alias for type " + ((BaseContext)ctx.getChild(0)).toJpqlString());
     }
 
     private static final class ConstructorArgReturnTypeVisitor extends JpqlValueHolderVisitor<Class<?>> {
@@ -174,7 +172,7 @@ public class JpqlCompiler {
             try {
                 clazz = toClass(entityClassName);
                 if (clazz.isInterface()) {
-                    for (ManagedType managedType : metamodel.getManagedTypes()) {
+                    for (ManagedType<?> managedType : metamodel.getManagedTypes()) {
                         if (clazz.isAssignableFrom(managedType.getJavaType())) {
                             defaultResult().setValue(clazz);
                         }
@@ -235,7 +233,7 @@ public class JpqlCompiler {
         }
 
         @Override
-        public List<Path> visitMainEntityPersisterReference(JpqlParser.MainEntityPersisterReferenceContext ctx) {
+        public List<Path> visitPathRoot(JpqlParser.PathRootContext ctx) {
             return stopVisitingChildren();
         }
 
@@ -309,28 +307,25 @@ public class JpqlCompiler {
             JpqlParser.ExpressionContext child1 = TreeRewriteSupport.copy(node.expression(0));
             JpqlParser.ExpressionContext child2 = TreeRewriteSupport.copy(node.expression(1));
             defaultResult().add(
-                    new ConditionalPath(child1.toString(), queryPreparator.createNotEquals(child1, child2)));
+                    new ConditionalPath(child1.toString(), QueryPreparator.createNotEquals(child1, child2)));
             return stopVisitingChildren();
         }
 
         @Override
-        public List<Path> visitMapEntryPath(MapEntryPathContext ctx) {
-            Path entryPath = new Path(ctx.toString());
-            defaultResult().add(new Path("ENTRY(" + ctx.mapReference().getText() + ")"));
-            defaultResult().add(new Path("KEY(" + entryPath.getRootAlias().getName() + ")"));
-            defaultResult().add(new Path("VALUE(" + entryPath.getRootAlias().getName() + ")"));
+        public List<Path> visitMapEntrySelection(JpqlParser.MapEntrySelectionContext ctx) {
+            defaultResult().add(new Path("ENTRY(" + ctx.path().getText() + ")"));
             return stopVisitingChildren();
         }
 
         @Override
-        public List<Path> visitMapKeyPathRoot(MapKeyPathRootContext ctx) {
-            defaultResult().add(new Path("KEY(" + ctx.mapReference().getText() + ")"));
+        public List<Path> visitMapKeyNavigablePath(JpqlParser.MapKeyNavigablePathContext ctx) {
+            defaultResult().add(new Path("KEY(" + ctx.path().getText() + ")"));
             return stopVisitingChildren();
         }
 
         @Override
-        public List<Path> visitCollectionValuePathRoot(CollectionValuePathRootContext ctx) {
-            defaultResult().add(new Path("VALUE(" + ctx.collectionReference().getText() + ")"));
+        public List<Path> visitCollectionElementNavigablePath(JpqlParser.CollectionElementNavigablePathContext ctx) {
+            defaultResult().add(new Path(ctx.op.getText() + "(" + ctx.path().getText() + ")"));
             defaultResult().add(new Path(ctx.getText()));
             return stopVisitingChildren();
         }
@@ -354,14 +349,6 @@ public class JpqlCompiler {
                     (JpqlParser.ExpressionContext)Trees.shallowCopy(node.predicate())
             );
         }
-
-        private static boolean isSimpleCase(JpqlParser.SimpleCaseWhenContext caseWhenContext) {
-            return true;
-        }
-
-        private static boolean isSimpleCase(JpqlParser.SearchedCaseWhenContext caseWhenContext) {
-            return false;
-        }
     }
 
     private static final class AliasVisitor extends JpqlVisitorAdapter<Set<TypeDefinition>> {
@@ -383,8 +370,8 @@ public class JpqlCompiler {
         }
 
         @Override
-        public Set<TypeDefinition> visitMainEntityPersisterReference(MainEntityPersisterReferenceContext ctx) {
-            String entityClassName = ctx.simplePathQualifier().getText();
+        public Set<TypeDefinition> visitPathRoot(JpqlParser.PathRootContext ctx) {
+            String entityClassName = ctx.entityName().fullEntityName;
             Path path = pathVisitor.getPath(ctx);
             Alias alias = getAlias(ctx);
 
@@ -392,7 +379,7 @@ public class JpqlCompiler {
             try {
                 clazz = toClass(entityClassName);
                 if (clazz.isInterface()) {
-                    for (ManagedType managedType: metamodel.getManagedTypes()) {
+                    for (ManagedType<?> managedType: metamodel.getManagedTypes()) {
                         if (clazz.isAssignableFrom(managedType.getJavaType())) {
                             defaultResult().add(new TypeDefinition(alias, managedType.getJavaType()));
                         }
@@ -414,7 +401,7 @@ public class JpqlCompiler {
                 // Ignore if not found
             }
 
-            for (EntityType entityType: metamodel.getEntities()) {
+            for (EntityType<?> entityType: metamodel.getEntities()) {
                 if (entityType.getName().equals(entityClassName)) {
                     defaultResult().add(new TypeDefinition(alias, entityType.getJavaType()));
                     return stopVisitingChildren();
@@ -448,7 +435,7 @@ public class JpqlCompiler {
         }
 
         @Override
-        public Set<TypeDefinition> visitFromElementSpaceRoot(JpqlParser.FromElementSpaceRootContext node) {
+        public Set<TypeDefinition> visitFromElementSpace(JpqlParser.FromElementSpaceContext node) {
             String abstractSchemaName = node.getChild(0).toString().trim();
             Alias alias = getAlias(node);
             Collection<Class<?>> types = new HashSet<>();
@@ -476,7 +463,7 @@ public class JpqlCompiler {
 
         @Override
         public Set<TypeDefinition> visitQualifiedJoin(JpqlParser.QualifiedJoinContext ctx) {
-            boolean innerJoin = ctx.LEFT() == null || ctx.OUTER() == null;
+            boolean innerJoin = true; // TODO: Is this correct?
             boolean fetchJoin = ctx.FETCH() != null;
             Path fetchPath = new Path(ctx.getChild(0).toString());
             Class<?> keyType = null;
@@ -512,12 +499,11 @@ public class JpqlCompiler {
         }
 
         private Alias getAlias(BaseContext ctx) {
-            if (ctx instanceof JpqlParser.MainEntityPersisterReferenceContext) {
-                JpqlParser.MainEntityPersisterReferenceContext context
-                        = (JpqlParser.MainEntityPersisterReferenceContext)ctx;
+            if (ctx instanceof JpqlParser.PathRootContext) {
+                JpqlParser.PathRootContext context = (JpqlParser.PathRootContext)ctx;
                 if (context.identificationVariableDef() == null) {
                     throw new PersistenceException(
-                            "Missing alias for type " + context.simplePathQualifier().toJpqlString());
+                            "Missing alias for type " + context.entityName().toJpqlString());
                 }
                 return new Alias(context.identificationVariableDef().getText());
             }
@@ -586,8 +572,8 @@ public class JpqlCompiler {
         }
 
         @Override
-        public ValueHolder<Path> visitMainEntityPersisterReference(MainEntityPersisterReferenceContext ctx) {
-            defaultResult().setValue(new Path(ctx.simplePathQualifier().toJpqlString()));
+        public ValueHolder<Path> visitPathRoot(JpqlParser.PathRootContext ctx) {
+            defaultResult().setValue(new Path(ctx.entityName().toJpqlString()));
             return stopVisitingChildren();
         }
 

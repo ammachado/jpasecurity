@@ -27,8 +27,16 @@ selectStatement
 	: querySpec orderByClause?
 	;
 
+subQuery
+    : querySpec
+    ;
+
+deleteStatement
+	: DELETE FROM? pathRoot whereClause?
+	;
+
 updateStatement
-	: UPDATE FROM? mainEntityPersisterReference setClause whereClause?
+	: UPDATE FROM? pathRoot setClause whereClause?
 	;
 
 setClause
@@ -39,48 +47,58 @@ assignment
 	: dotIdentifierSequence EQUAL expression
 	;
 
-deleteStatement
-	: DELETE FROM? mainEntityPersisterReference whereClause?
+pathRoot
+	: entityName identificationVariableDef?
 	;
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ORDER BY clause
-
-orderByClause
-	: ORDER BY sortSpecification ( COMMA sortSpecification )*
+fromClause
+	: FROM fromElementSpace ( COMMA fromElementSpace )*
 	;
 
-sortSpecification
-	: expression orderingSpecification?
+fromElementSpace
+	: pathRoot ( jpaCollectionJoin | qualifiedJoin )*
 	;
 
-orderingSpecification
-	:	ASC
-	|	DESC
+entityName returns [String fullEntityName] @init { $fullEntityName = ""; }
+	: (i=identifier { $fullEntityName = _localctx.i.getText(); }) (DOT c=identifier { $fullEntityName += ("." + _localctx.c.getText() ); })*
 	;
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// QUERY SPEC - general structure of root query or sub query
-
-querySpec
-	: selectClause? fromClause whereClause? groupByClause? havingClause?
+identificationVariableDef
+	: ( AS identificationVariable )
+	| IDENTIFIER
 	;
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// SELECT clause
+jpaCollectionJoin
+	: COMMA IN LEFT_PAREN path RIGHT_PAREN identificationVariableDef?
+	;
+
+qualifiedJoin
+	: op = ( INNER | LEFT | RIGHT )? OUTER? JOIN FETCH? path identificationVariableDef? qualifiedJoinPredicate?
+	;
+
+qualifiedJoinPredicate
+	: ON predicate
+	;
 
 selectClause
 	: SELECT hintStatement? DISTINCT? selectionList
 	;
+
+hintStatement
+    : HINT_START hintValue+ HINT_END
+    ;
+
+hintValue
+    : IS_ACCESSIBLE_NOCACHE     #NoCacheIsAccessible
+    | IS_ACCESSIBLE_NODB        #NoDbIsAccessible
+    | QUERY_OPTIMIZE_NOCACHE    #NoCacheQueryOptimize
+    ;
 
 selectionList
 	: selection ( COMMA selection )*
 	;
 
 selection
-	// I have noticed that without this predicate, Antlr will sometimes
-	// interpret `select a.b from Something ...` as `from` being the
-	// select-expression alias
 	: selectExpression identificationVariableDef?
 	;
 
@@ -97,50 +115,6 @@ mapEntrySelection
 
 constructorExpression
 	: NEW dotIdentifierSequence LEFT_PAREN constructorParameters RIGHT_PAREN
-	;
-
-dotIdentifierSequence
-	: identifier ( DOT identifier )*
-	;
-
-simplePathQualifier
-    : dotIdentifierSequence
-    ;
-
-path
-	// a SimplePath may be any number of things like:
-	//		* Class FQN
-	//		* Java constant (enum/static)
-	//		* an identification variable
-	//		* an unqualified attribute name
-	: simplePathQualifier																	# SimplePath
-	// a Map.Entry cannot be further dereferenced
-	| ENTRY LEFT_PAREN mapReference RIGHT_PAREN												# MapEntryPath
-	// only one index-access is allowed per path
-	| path LEFT_BRACKET expression RIGHT_BRACKET pathTerminal?								# IndexedPath
-	// most path expressions fall into this bucket
-	| pathRoot pathTerminal?																# CompoundPath
-	;
-
-pathRoot
-	: identifier																			# SimplePathRoot
-	| TREAT LEFT_PAREN dotIdentifierSequence AS dotIdentifierSequence RIGHT_PAREN			# TreatedPathRoot
-	| KEY LEFT_PAREN mapReference RIGHT_PAREN												# MapKeyPathRoot
-	| VALUE LEFT_PAREN collectionReference RIGHT_PAREN										# CollectionValuePathRoot
-	;
-
-pathTerminal
-	: ( DOT identifier )+
-	;
-
-// having as a separate rule allows us to validate that the path indeed resolves to a Collection attribute
-collectionReference
-	: path
-	;
-
-// having as a separate rule allows us to validate that the path indeed resolves to a Map attribute
-mapReference
-	: path
 	;
 
 constructorParameters
@@ -160,48 +134,59 @@ jpaSelectObjectSyntax
 	: OBJECT LEFT_PAREN identifier RIGHT_PAREN
 	;
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// FROM clause
+dotIdentifierSequence
+	: identifier dotIdentifierSequenceContinuation*
+    ;
 
-fromClause
-	: FROM fromElementSpace ( COMMA fromElementSpace )*
+ dotIdentifierSequenceContinuation
+    : DOT identifier
+    ;
+
+path
+	: syntacticDomainPath pathContinuation?
+	| generalPathFragment
 	;
 
-fromElementSpace
-	: fromElementSpaceRoot ( jpaCollectionJoin | qualifiedJoin )*
+pathContinuation
+	: DOT dotIdentifierSequence
 	;
 
-fromElementSpaceRoot
-	: mainEntityPersisterReference
+/**
+ * Rule for cases where we syntactically know that the path is a
+ * "domain path" because it is one of these special cases:
+ *
+ * 		* TREAT( path )
+ * 		* ELEMENTS( path )
+ *		* VALUE( path )
+ * 		* KEY( path )
+ * 		* path[ selector ]
+ */
+syntacticDomainPath
+	: treatedNavigablePath
+	| collectionElementNavigablePath
+	| mapKeyNavigablePath
+	| dotIdentifierSequence indexedPathAccessFragment
 	;
 
-mainEntityPersisterReference
-	: simplePathQualifier identificationVariableDef?
+generalPathFragment
+	: dotIdentifierSequence indexedPathAccessFragment?
 	;
 
-identificationVariableDef
-	: (AS identificationVariable)
-	| IDENTIFIER
+indexedPathAccessFragment
+	: LEFT_BRACKET expression RIGHT_BRACKET ( DOT generalPathFragment )?
 	;
 
-identificationVariable returns [String value] @init { $value = ""; }
-	: identifier { $value = _localctx.getText(); }
+treatedNavigablePath
+	: TREAT LEFT_PAREN path AS dotIdentifierSequence RIGHT_PAREN pathContinuation?
 	;
 
-jpaCollectionJoin
-	: COMMA IN LEFT_PAREN path RIGHT_PAREN identificationVariableDef?
+collectionElementNavigablePath
+	: op=( VALUE | ELEMENTS ) LEFT_PAREN path RIGHT_PAREN pathContinuation?
 	;
 
-qualifiedJoin
-	: ( INNER | ( LEFT OUTER? ) )? JOIN FETCH? path identificationVariableDef? qualifiedJoinPredicate?
+mapKeyNavigablePath
+	: KEY LEFT_PAREN path RIGHT_PAREN pathContinuation?
 	;
-
-qualifiedJoinPredicate
-	: ON predicate
-	;
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// GROUP BY clause
 
 groupByClause
 	: GROUP BY groupingSpecification
@@ -215,83 +200,90 @@ groupingValue
 	: expression
 	;
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//HAVING clause
-
 havingClause
 	: HAVING predicate
 	;
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// WHERE clause
+orderByClause
+	: ORDER BY sortSpecification ( COMMA sortSpecification )*
+	;
+
+sortSpecification
+	: sortExpression orderingSpecification?
+	;
+
+sortExpression
+	: identifier
+	| INTEGER_LITERAL
+	| expression
+	;
+
+orderingSpecification
+	:	ASC
+	|	DESC
+	;
 
 whereClause
 	: WHERE predicate
 	;
 
 predicate
-	: LEFT_PAREN predicate RIGHT_PAREN														# GroupedPredicate
-	| predicate OR predicate																# OrPredicate
-	| predicate AND predicate																# AndPredicate
-	| NOT predicate																			# NegatedPredicate
-	| expression NOT? IN inList																# InPredicate
-	| expression IS NOT? NULL																# IsNullPredicate
-	| expression IS NOT? EMPTY																# IsEmptyPredicate
-	| expression EQUAL expression															# EqualityPredicate
-	| expression GREATER expression															# GreaterThanPredicate
-	| expression GREATER_EQUAL expression													# GreaterThanOrEqualPredicate
-	| expression LESS expression															# LessThanPredicate
-	| expression LESS_EQUAL expression														# LessThanOrEqualPredicate
-	| expression NOT_EQUAL expression														# InequalityPredicate
-	| expression NOT? BETWEEN expression AND expression										# BetweenPredicate
-	| expression NOT? LIKE expression likeEscape?											# LikePredicate
-	| expression NOT? MEMBER OF path														# MemberOfPredicate
-	| EXISTS LEFT_PAREN querySpec RIGHT_PAREN												# ExistsPredicate
-	| entityTypeReference op=( EQUAL | NOT_EQUAL ) dotParam									# TypeEqualityPredicate
-	| entityTypeReference NOT? IN LEFT_PAREN dotParamList RIGHT_PAREN						# TypeInListPredicate
-	| jpaNonStandardFunction ( comparisonOperators expression )?							# JpaNonStandardFunctionPredicate
-	;
-
-expression
-	: LEFT_PAREN expression RIGHT_PAREN														# GroupedExpression
-	| subQuery																				# SubQueryExpression
-	| PLUS expression																		# UnaryPlusExpression
-	| MINUS expression																		# UnaryMinusExpression
-	| expression PLUS expression															# AdditionExpression
-	| expression MINUS expression															# SubtractionExpression
-	| expression ASTERISK expression														# MultiplicationExpression
-	| expression SLASH expression															# DivisionExpression
-	| caseStatement																			# CaseExpression
-	| coalesce																				# CoalesceExpression
-	| nullIf																				# NullIfExpression
-	| literal																				# LiteralExpression
-	| parameter																				# ParameterExpression
-	| entityTypeReference																	# EntityTypeExpression
-	| path																					# PathExpression
-	| function																				# FunctionExpression
-	| op=( ALL | ANY | SOME ) LEFT_PAREN querySpec RIGHT_PAREN								# AllOrAnyExpression
+	: LEFT_PAREN predicate RIGHT_PAREN								# GroupedPredicate
+	| predicate OR predicate										# OrPredicate
+	| predicate AND predicate										# AndPredicate
+	| NOT predicate													# NegatedPredicate
+	| expression NOT? IN inList										# InPredicate
+	| expression IS NOT? NULL										# IsNullPredicate
+	| expression IS NOT? EMPTY										# IsEmptyPredicate
+	| expression EQUAL expression									# EqualityPredicate
+	| expression NOT_EQUAL expression								# InequalityPredicate
+	| expression GREATER expression									# GreaterThanPredicate
+	| expression GREATER_EQUAL expression							# GreaterThanOrEqualPredicate
+	| expression LESS expression									# LessThanPredicate
+	| expression LESS_EQUAL expression								# LessThanOrEqualPredicate
+	| expression NOT? IN inList										# InPredicate
+	| expression NOT? BETWEEN expression AND expression				# BetweenPredicate
+	| expression NOT? LIKE expression likeEscape?					# LikePredicate
+	| MEMBER OF path												# MemberOfPredicate
+	| EXISTS LEFT_PAREN querySpec RIGHT_PAREN						# ExistsPredicate
+	| entityTypeReference op=( EQUAL | NOT_EQUAL ) entityParam		# TypeEqualityPredicate
+	| entityTypeReference NOT? IN LEFT_PAREN entityParam RIGHT_PAREN	# TypeInListPredicate
+	| jpaNonStandardFunction comparisonOperators expression			# JpaNonStandardFunctionPredicate
 	;
 
 inList
-	: LEFT_PAREN expression ( COMMA expression )* RIGHT_PAREN								# ExplicitTupleInList
-	| subQuery																				# SubQueryInList
+	: ELEMENTS? LEFT_PAREN dotIdentifierSequence RIGHT_PAREN		# PersistentCollectionReferenceInList
+	| LEFT_PAREN expression ( COMMA expression )*	RIGHT_PAREN		# ExplicitTupleInList
+	| expression													# SubQueryInList
 	;
 
 likeEscape
 	: ESCAPE expression
 	;
 
-subQuery
-	: LEFT_PAREN querySpec RIGHT_PAREN
+expression
+	: LEFT_PAREN expression RIGHT_PAREN								# GroupedExpression
+    | expression PLUS expression									# AdditionExpression
+	| expression MINUS expression									# SubtractionExpression
+	| expression ASTERISK expression								# MultiplicationExpression
+	| expression SLASH expression									# DivisionExpression
+	| expression PERCENT expression									# ModuloExpression
+	| MINUS expression												# UnaryMinusExpression
+	| PLUS expression												# UnaryPlusExpression
+	| caseStatement													# CaseExpression
+	| coalesce														# CoalesceExpression
+	| nullIf														# NullIfExpression
+	| literal														# LiteralExpression
+	| parameter														# ParameterExpression
+	| entityTypeReference											# EntityTypeExpression
+	| path															# PathExpression
+	| function														# FunctionExpression
+	| LEFT_PAREN subQuery RIGHT_PAREN								# SubQueryExpression
+	| op=( ALL | ANY | SOME ) LEFT_PAREN querySpec RIGHT_PAREN		# AllOrAnyExpression
 	;
 
 entityTypeReference
 	: TYPE LEFT_PAREN entityLiteralReference RIGHT_PAREN
-	;
-
-entityLiteralReference
-	: path
-	| parameter
 	;
 
 caseStatement
@@ -328,48 +320,51 @@ nullIf
 	;
 
 literal
-	: STRING_LITERAL																		# StringLiteral
-	| CHARACTER_LITERAL																		# CharacterLiteral
-	| INTEGER_LITERAL																		# IntegerLiteral
-	| LONG_LITERAL																			# LongLiteral
-	| BIG_INTEGER_LITERAL																	# BigIntegerLiteral
-	| FLOAT_LITERAL																			# FloatLiteral
-	| DOUBLE_LITERAL																		# DoubleLiteral
-	| BIG_DECIMAL_LITERAL																	# BigDecimalLiteral
-	| HEX_LITERAL																			# HexLiteral
-	| OCTAL_LITERAL																			# OctalLiteral
-	| NULL																					# NullLiteral
-	| booleanLiteralRule																	# BooleanLiteral
-	| TIMESTAMP_LITERAL																		# TimestampLiteral
-	| DATE_LITERAL																			# DateLiteral
-	| TIME_LITERAL																			# TimeLiteral
+	: STRING_LITERAL												# StringLiteral
+	| CHARACTER_LITERAL												# CharacterLiteral
+	| INTEGER_LITERAL												# IntegerLiteral
+	| LONG_LITERAL													# LongLiteral
+	| BIG_INTEGER_LITERAL											# BigIntegerLiteral
+	| FLOAT_LITERAL													# FloatLiteral
+	| DOUBLE_LITERAL												# DoubleLiteral
+	| BIG_DECIMAL_LITERAL											# BigDecimalLiteral
+	| HEX_LITERAL													# HexLiteral
+	| OCTAL_LITERAL													# OctalLiteral
+	| NULL															# NullLiteral
+	| TRUE															# TrueLiteral
+    | FALSE															# FalseLiteral
+	| TIMESTAMP_LITERAL												# TimestampLiteral
+	| DATE_LITERAL													# DateLiteral
+	| TIME_LITERAL													# TimeLiteral
 	;
 
-booleanLiteralRule
-    : TRUE
-    | FALSE
-    ;
-
 parameter
-	: COLON identifier																		# NamedParameter
-	| QUESTION_MARK INTEGER_LITERAL?														# PositionalParameter
+	: COLON identifier												# NamedParameter
+	| QUESTION_MARK INTEGER_LITERAL?								# PositionalParameter
 	;
 
 function
 	: standardFunction
 	| aggregateFunction
+	| jpaCollectionFunction
+	| jpaNonStandardFunction
 	;
 
 jpaNonStandardFunction
-	: FUNCTION LEFT_PAREN nonStandardFunctionName ( COMMA nonStandardFunctionArguments )? RIGHT_PAREN
+	: FUNCTION LEFT_PAREN jpaNonStandardFunctionName ( COMMA nonStandardFunctionArguments )? RIGHT_PAREN
 	;
 
-nonStandardFunctionName
-	: dotIdentifierSequence
+jpaNonStandardFunctionName
+	: STRING_LITERAL
 	;
 
 nonStandardFunctionArguments
 	: expression ( COMMA expression )*
+	;
+
+jpaCollectionFunction
+	: SIZE LEFT_PAREN path RIGHT_PAREN					# CollectionSizeFunction
+	| INDEX LEFT_PAREN identifier RIGHT_PAREN			# CollectionIndexFunction
 	;
 
 aggregateFunction
@@ -544,16 +539,6 @@ bitLengthFunction
 	: BIT_LENGTH LEFT_PAREN expression RIGHT_PAREN
 	;
 
-/**
- * The `identifier` is used to provide "keyword as identifier" handling.
- *
- * The lexer hands us recognized keywords using their specific tokens.  This is important
- * for the recognition of query structure, especially in terms of performance!
- *
- * However we want to continue to allow users to use mopst keywords as identifiers (e.g., attribute names).
- * This parser rule helps with that.  Here we expect that the caller already understands their
- * context enough to know that keywords-as-identifiers are allowed.
- */
 identifier
 	: IDENTIFIER
 	| (ABS
@@ -568,7 +553,6 @@ identifier
 	| BIT_LENGTH
 	| BOTH
 	| COALESCE
-	| COLLATE
 	| CONCAT
 	| COUNT
 	| DELETE
@@ -600,6 +584,7 @@ identifier
 	| ORDER
 	| OUTER
 	| POSITION
+	| RIGHT
 	| SELECT
 	| SET
 	| SQRT
@@ -615,13 +600,26 @@ identifier
 	}
 	;
 
-dotParam
-    : dotIdentifierSequence
+querySpec
+	: selectClause fromClause whereClause? ( groupByClause havingClause? )?
+	;
+
+identificationVariable returns [String value] @init { $value = ""; }
+	: identifier { $value = _localctx.getText(); }
+	;
+
+entityLiteralReference
+	: path
+	| parameter
+	;
+
+entityParam
+    : entityName
     | parameter
     ;
 
-dotParamList
-    : dotParam ( COMMA dotParam )+
+entityParamList
+    : entityParam ( COMMA entityParam )*
     ;
 
 comparisonOperators
@@ -637,39 +635,5 @@ comparisonOperators
 // GRANT clause
 
 accessRule
-    : GRANT CREATE? READ? UPDATE? DELETE? ACCESS TO mainEntityPersisterReference whereClause?
-    ;
-
-functionsReturningStrings
-    : concatFunction
-    | substringFunction
-    | trimFunction
-    | lowerFunction
-    | upperFunction
-    ;
-
-functionsReturningNumerics
-    : absFunction
-    | sqrtFunction
-    | modFunction
-    | sizeFunction
-    | indexFunction
-    | lengthFunction
-    | locateFunction
-    ;
-
-functionsReturningDateTime
-    : CURRENT_DATE
-    | CURRENT_TIME
-    | CURRENT_TIMESTAMP
-    ;
-
-hintStatement
-    : HINT_START hintValue+ HINT_END
-    ;
-
-hintValue
-    : IS_ACCESSIBLE_NOCACHE     #NoCacheIsAccessible
-    | IS_ACCESSIBLE_NODB        #NoDbIsAccessible
-    | QUERY_OPTIMIZE_NOCACHE    #NoCacheQueryOptimize
+    : GRANT CREATE? READ? UPDATE? DELETE? ACCESS TO pathRoot whereClause?
     ;

@@ -345,14 +345,14 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
     @Override
     public QueryEvaluationParameters visitMemberOfPredicate(JpqlParser.MemberOfPredicateContext ctx) {
         try {
-            visit(ctx.expression());
+            visit(ctx.path());
             Object value = defaultResult().getResult();
             visit(ctx.path());
             defaultResult().setResult(((Collection<?>)defaultResult().getResult()).contains(value));
-            if (!defaultResult().isResultUndefined() && ctx.NOT() != null) {
-                boolean r = defaultResult().getResult();
-                defaultResult().setResult(!r);
-            }
+//            if (!defaultResult().isResultUndefined() && ctx.NOT() != null) {
+//                boolean r = defaultResult().getResult();
+//                defaultResult().setResult(!r);
+//            }
         } catch (NotEvaluatableException e) {
             //result is undefined, which is ok here
         }
@@ -486,7 +486,7 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
         try {
             BigDecimal value1 = new BigDecimal(visit(ctx.expression(0)).getResult().toString());
             BigDecimal value2 = new BigDecimal(visit(ctx.expression(1)).getResult().toString());
-            defaultResult().setResult(value1.divide(value2));
+            defaultResult().setResult(value1.divide(value2, RoundingMode.HALF_DOWN));
         } catch (NotEvaluatableException e) {
             //result is undefined, which is ok here
         }
@@ -697,7 +697,7 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
     }
 
     @Override
-    public QueryEvaluationParameters visitMainEntityPersisterReference(JpqlParser.MainEntityPersisterReferenceContext ctx) {
+    public QueryEvaluationParameters visitEntityName(JpqlParser.EntityNameContext ctx) {
         defaultResult().setResult(ManagedTypeFilter.forModel(defaultResult().getMetamodel()).filter(ctx.getText().trim()).getJavaType());
         return stopVisitingChildren();
     }
@@ -769,7 +769,13 @@ public class QueryEvaluatorImpl extends JpqlVisitorAdapter<QueryEvaluationParame
     }
 
     @Override
-    public QueryEvaluationParameters visitBooleanLiteral(JpqlParser.BooleanLiteralContext ctx) {
+    public QueryEvaluationParameters visitTrueLiteral(JpqlParser.TrueLiteralContext ctx) {
+        defaultResult().setResult(Boolean.valueOf(ctx.getText()));
+        return stopVisitingChildren();
+    }
+
+    @Override
+    public QueryEvaluationParameters visitFalseLiteral(JpqlParser.FalseLiteralContext ctx) {
         defaultResult().setResult(Boolean.valueOf(ctx.getText()));
         return stopVisitingChildren();
     }
